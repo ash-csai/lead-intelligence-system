@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Lead Pipeline</h2>
+
+<div class="row">
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>New</h5>
+<p>{{ new }}</p>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>Contacted</h5>
+<p>{{ contacted }}</p>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>Interested</h5>
+<p>{{ interested }}</p>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>Applied</h5>
+<p>{{ applied }}</p>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>Admitted</h5>
+<p>{{ admitted }}</p>
+</div>
+</div>
+</div>
+
+<div class="col">
+<div class="card text-center">
+<div class="card-body">
+<h5>Lost</h5>
+<p>{{ lost }}</p>
+</div>
+</div>
+</div>
+
+</div>
+
+{% endblock %}
