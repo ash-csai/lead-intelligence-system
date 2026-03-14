@@ -17,6 +17,7 @@
 <th>Interest</th>
 <th>Status</th>
 <th>Created</th>
+<th>Actions</th>
 
 </tr>
 
@@ -35,6 +36,17 @@
 <td>{{ lead.interest_level }}</td>
 <td>{{ lead.status }}</td>
 <td>{{ lead.created_at }}</td>
+
+<td>
+
+<a class="btn btn-sm btn-primary"
+href="/leads/{{ lead.lead_id }}">
+
+View
+
+</a>
+
+</td>
 
 </tr>
 

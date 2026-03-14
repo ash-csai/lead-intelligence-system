@@ -84,5 +84,18 @@ def lead_list():
 
     return render_template("leads.html", leads=leads)
 
+@app.route("/leads/<int:lead_id>")
+def lead_detail(lead_id):
+
+    db = get_db()
+
+    lead = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_id = ?
+    """, (lead_id,)).fetchone()
+
+    return render_template("lead_detail.html", lead=lead)
+
 if __name__ == "__main__":
     app.run(debug=True)

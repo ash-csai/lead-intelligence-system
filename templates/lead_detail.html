@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Lead Detail</h2>
+
+<div class="card">
+
+<div class="card-body">
+
+<h4>{{ lead.student_name }}</h4>
+
+<p><strong>Phone:</strong> {{ lead.phone }}</p>
+
+<p><strong>City:</strong> {{ lead.city }}</p>
+
+<p><strong>Course Interest:</strong> {{ lead.course_interest }}</p>
+
+<p><strong>Interest Level:</strong> {{ lead.interest_level }}</p>
+
+<p><strong>Status:</strong> {{ lead.status }}</p>
+
+<p><strong>Created:</strong> {{ lead.created_at }}</p>
+
+<p><strong>Notes:</strong> {{ lead.notes }}</p>
+
+</div>
+
+</div>
+
+<a href="/leads" class="btn btn-secondary mt-3">
+Back to Leads
+</a>
+
+{% endblock %}
