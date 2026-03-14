@@ -69,5 +69,20 @@ def add_lead():
 
     return render_template("add_lead.html")
 
+@app.route("/leads")
+def lead_list():
+
+    db = get_db()
+
+    leads = db.execute("""
+        SELECT lead_id, student_name, phone, city,
+               course_interest, interest_level,
+               status, created_at
+        FROM leads
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    return render_template("leads.html", leads=leads)
+
 if __name__ == "__main__":
     app.run(debug=True)

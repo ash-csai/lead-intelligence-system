@@ -10,11 +10,33 @@
 
 <body>
 
+<!-- Navbar -->
+
 <nav class="navbar navbar-dark bg-dark">
+
 <div class="container-fluid">
-<span class="navbar-brand">Lead Intelligence System</span>
+
+<a class="navbar-brand" href="/">
+Lead Intelligence System
+</a>
+
+<div>
+
+<a class="btn btn-light me-2" href="/leads">
+View Leads
+</a>
+
+<a class="btn btn-success" href="/leads/add">
+Add Lead
+</a>
+
 </div>
+
+</div>
+
 </nav>
+
+<!-- Main Page Content -->
 
 <div class="container mt-4">
 {% block content %}{% endblock %}
