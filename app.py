@@ -95,7 +95,18 @@ def lead_detail(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
-    return render_template("lead_detail.html", lead=lead)
+    interactions = db.execute("""
+        SELECT *
+        FROM interactions
+        WHERE lead_id = ?
+        ORDER BY created_at DESC
+    """, (lead_id,)).fetchall()
+
+    return render_template(
+        "lead_detail.html",
+        lead=lead,
+        interactions=interactions
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)
