@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Follow-Up Dashboard</h2>
+
+<hr>
+
+<h4>Today's Follow-ups</h4>
+
+<ul class="list-group mb-4">
+
+{% for f in today %}
+
+<li class="list-group-item">
+
+<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
+{{ f.notes }}<br>
+<small>Follow-up: {{ f.follow_up_date }}</small>
+
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No follow-ups today
+</li>
+
+{% endfor %}
+
+</ul>
+
+
+<h4>Overdue Follow-ups</h4>
+
+<ul class="list-group mb-4">
+
+{% for f in overdue %}
+
+<li class="list-group-item list-group-item-danger">
+
+<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
+{{ f.notes }}<br>
+<small>Follow-up: {{ f.follow_up_date }}</small>
+
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No overdue follow-ups
+</li>
+
+{% endfor %}
+
+</ul>
+
+
+<h4>Upcoming Follow-ups</h4>
+
+<ul class="list-group">
+
+{% for f in upcoming %}
+
+<li class="list-group-item">
+
+<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
+{{ f.notes }}<br>
+<small>Follow-up: {{ f.follow_up_date }}</small>
+
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No upcoming follow-ups
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endblock %}

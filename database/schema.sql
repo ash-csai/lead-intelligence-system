@@ -41,16 +41,13 @@ CREATE TABLE leads (
 CREATE TABLE interactions (
     interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     lead_id INTEGER NOT NULL,
-    interaction_type TEXT,
-    interaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    interaction_type TEXT NOT NULL,
     notes TEXT,
-    next_followup_date DATE,
+    follow_up_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (lead_id) REFERENCES leads(lead_id)
 );
-
-ALTER TABLE interactions
-ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 -- Users table (future expansion)
 CREATE TABLE users (
@@ -61,12 +58,3 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS interactions (
-    interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lead_id INTEGER NOT NULL,
-    interaction_type TEXT NOT NULL,
-    notes TEXT,
-    follow_up_date DATE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (lead_id) REFERENCES leads(lead_id)
-);

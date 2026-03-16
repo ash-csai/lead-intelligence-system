@@ -26,6 +26,8 @@ Lead Information
 
 <p><strong>Interest Level:</strong> {{ lead.interest_level }}</p>
 
+<p><strong>Lead Score:</strong> {{ lead.lead_score }}</p>
+
 <p><strong>Status:</strong> {{ lead.status }}</p>
 
 <p><strong>Created:</strong> {{ lead.created_at }}</p>
@@ -49,6 +51,48 @@ Back to Leads
 <div class="col-8">
 
 <div class="card">
+
+<h5>Add Interaction</h5>
+
+<form method="POST" action="/leads/{{ lead.lead_id }}/add_interaction">
+
+<div class="mb-2">
+
+<label class="form-label">Interaction Type</label>
+
+<select name="interaction_type" class="form-control" required>
+<option value="Call">Call</option>
+<option value="Meeting">Meeting</option>
+<option value="WhatsApp">WhatsApp</option>
+<option value="Email">Email</option>
+<option value="Visit">Visit</option>
+</select>
+
+</div>
+
+<div class="mb-2">
+
+<label class="form-label">Notes</label>
+
+<textarea name="notes" class="form-control"></textarea>
+
+</div>
+
+<div class="mb-2">
+
+<label class="form-label">Next Follow-up Date</label>
+
+<input type="date" name="follow_up_date" class="form-control">
+
+</div>
+
+<button type="submit" class="btn btn-primary">
+Add Interaction
+</button>
+
+</form>
+
+<hr>
 
 <div class="card-header">
 Interaction Timeline

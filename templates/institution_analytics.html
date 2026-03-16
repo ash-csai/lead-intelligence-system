@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Institution Influence Dashboard</h2>
+
+<hr>
+
+<h4>Top Schools by Leads</h4>
+
+<ul class="list-group mb-4">
+
+{% for s in school_stats %}
+
+<li class="list-group-item">
+{{ s.name }} — {{ s.total_leads }} leads
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No schools recorded yet
+</li>
+
+{% endfor %}
+
+</ul>
+
+
+<h4>Top Coaching Centres by Leads</h4>
+
+<ul class="list-group">
+
+{% for c in coaching_stats %}
+
+<li class="list-group-item">
+{{ c.name }} — {{ c.total_leads }} leads
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No coaching centres recorded yet
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endblock %}

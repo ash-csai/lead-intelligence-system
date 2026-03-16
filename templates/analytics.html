@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Lead Intelligence Dashboard</h2>
+
+<hr>
+
+<h4>Leads by City</h4>
+
+<ul class="list-group mb-4">
+
+{% for c in city_stats %}
+
+<li class="list-group-item">
+{{ c.city }} — {{ c.total }} leads
+</li>
+
+{% endfor %}
+
+</ul>
+
+
+<h4>Leads by Source</h4>
+
+<ul class="list-group mb-4">
+
+{% for s in source_stats %}
+
+<li class="list-group-item">
+{{ s.lead_source }} — {{ s.total }} leads
+</li>
+
+{% endfor %}
+
+</ul>
+
+
+<h4>Lead Status Pipeline</h4>
+
+<ul class="list-group">
+
+{% for s in status_stats %}
+
+<li class="list-group-item">
+{{ s.status }} — {{ s.total }}
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% endblock %}

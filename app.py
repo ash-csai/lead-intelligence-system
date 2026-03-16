@@ -4,6 +4,25 @@ import sqlite3
 
 app = Flask(__name__)
 
+def calculate_lead_score(lead):
+
+    score = 0
+
+    # Interest level scoring
+    if lead["interest_level"] == "high":
+        score += 40
+    elif lead["interest_level"] == "medium":
+        score += 25
+    elif lead["interest_level"] == "low":
+        score += 10
+
+    # Status scoring
+    if lead["status"] == "interested":
+        score += 20
+    elif lead["status"] == "applied":
+        score += 30
+
+    return score
 
 @app.route("/")
 def dashboard():
@@ -95,6 +114,17 @@ def lead_detail(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
+    # Calculate lead score
+    score = calculate_lead_score(lead)
+
+    db.execute("""
+        UPDATE leads
+        SET lead_score = ?
+        WHERE lead_id = ?
+    """, (score, lead_id))
+
+    db.commit()
+
     interactions = db.execute("""
         SELECT *
         FROM interactions
@@ -106,6 +136,122 @@ def lead_detail(lead_id):
         "lead_detail.html",
         lead=lead,
         interactions=interactions
+    )
+
+@app.route("/leads/<int:lead_id>/add_interaction", methods=["POST"])
+def add_interaction(lead_id):
+
+    db = get_db()
+
+    interaction_type = request.form["interaction_type"]
+    notes = request.form["notes"]
+    follow_up_date = request.form["follow_up_date"]
+
+    db.execute("""
+        INSERT INTO interactions
+        (lead_id, interaction_type, notes, follow_up_date)
+        VALUES (?, ?, ?, ?)
+    """, (lead_id, interaction_type, notes, follow_up_date))
+
+    db.commit()
+
+    return redirect(f"/leads/{lead_id}")
+
+@app.route("/followups")
+def followups():
+
+    db = get_db()
+
+    today = db.execute("""
+        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
+        FROM interactions i
+        JOIN leads l ON i.lead_id = l.lead_id
+        WHERE i.follow_up_date = DATE('now')
+        ORDER BY i.follow_up_date
+    """).fetchall()
+
+    overdue = db.execute("""
+        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
+        FROM interactions i
+        JOIN leads l ON i.lead_id = l.lead_id
+        WHERE i.follow_up_date < DATE('now')
+        ORDER BY i.follow_up_date
+    """).fetchall()
+
+    upcoming = db.execute("""
+        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
+        FROM interactions i
+        JOIN leads l ON i.lead_id = l.lead_id
+        WHERE i.follow_up_date > DATE('now')
+        ORDER BY i.follow_up_date
+    """).fetchall()
+
+    return render_template(
+        "followups.html",
+        today=today,
+        overdue=overdue,
+        upcoming=upcoming
+    )
+
+@app.route("/analytics")
+def analytics():
+
+    db = get_db()
+
+    city_stats = db.execute("""
+        SELECT city, COUNT(*) as total
+        FROM leads
+        GROUP BY city
+        ORDER BY total DESC
+    """).fetchall()
+
+    source_stats = db.execute("""
+        SELECT lead_source, COUNT(*) as total
+        FROM leads
+        GROUP BY lead_source
+        ORDER BY total DESC
+    """).fetchall()
+
+    status_stats = db.execute("""
+        SELECT status, COUNT(*) as total
+        FROM leads
+        GROUP BY status
+    """).fetchall()
+
+    return render_template(
+        "analytics.html",
+        city_stats=city_stats,
+        source_stats=source_stats,
+        status_stats=status_stats
+    )
+
+@app.route("/institutions/analytics")
+def institution_analytics():
+
+    db = get_db()
+
+    school_stats = db.execute("""
+        SELECT i.name, COUNT(l.lead_id) as total_leads
+        FROM institutions i
+        LEFT JOIN leads l ON l.school_id = i.institution_id
+        WHERE i.type = 'school'
+        GROUP BY i.institution_id
+        ORDER BY total_leads DESC
+    """).fetchall()
+
+    coaching_stats = db.execute("""
+        SELECT i.name, COUNT(l.lead_id) as total_leads
+        FROM institutions i
+        LEFT JOIN leads l ON l.coaching_id = i.institution_id
+        WHERE i.type = 'coaching_center'
+        GROUP BY i.institution_id
+        ORDER BY total_leads DESC
+    """).fetchall()
+
+    return render_template(
+        "institution_analytics.html",
+        school_stats=school_stats,
+        coaching_stats=coaching_stats
     )
 
 if __name__ == "__main__":
