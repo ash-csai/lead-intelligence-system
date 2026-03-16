@@ -254,5 +254,47 @@ def institution_analytics():
         coaching_stats=coaching_stats
     )
 
+@app.route("/institutions")
+def institutions():
+
+    db = get_db()
+
+    institutions = db.execute("""
+        SELECT *
+        FROM institutions
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    return render_template(
+        "institutions.html",
+        institutions=institutions
+    )
+
+@app.route("/institutions/add", methods=["GET","POST"])
+def add_institution():
+
+    db = get_db()
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        type = request.form["type"]
+        city = request.form["city"]
+        contact_person = request.form["contact_person"]
+        contact_phone = request.form["contact_phone"]
+        notes = request.form["notes"]
+
+        db.execute("""
+            INSERT INTO institutions
+            (name, type, city, contact_person, contact_phone, notes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, type, city, contact_person, contact_phone, notes))
+
+        db.commit()
+
+        return redirect("/institutions")
+
+    return render_template("add_institution.html")
+
 if __name__ == "__main__":
     app.run(debug=True)

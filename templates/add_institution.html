@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Add Institution</h2>
+
+<form method="POST">
+
+<div class="mb-2">
+<label>Name</label>
+<input class="form-control" name="name" required>
+</div>
+
+<div class="mb-2">
+<label>Type</label>
+<select class="form-control" name="type">
+<option value="school">School</option>
+<option value="coaching_center">Coaching Centre</option>
+</select>
+</div>
+
+<div class="mb-2">
+<label>City</label>
+<input class="form-control" name="city">
+</div>
+
+<div class="mb-2">
+<label>Contact Person</label>
+<input class="form-control" name="contact_person">
+</div>
+
+<div class="mb-2">
+<label>Contact Phone</label>
+<input class="form-control" name="contact_phone">
+</div>
+
+<div class="mb-2">
+<label>Notes</label>
+<textarea class="form-control" name="notes"></textarea>
+</div>
+
+<button class="btn btn-primary">
+Save
+</button>
+
+</form>
+
+{% endblock %}
