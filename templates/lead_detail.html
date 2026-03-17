@@ -28,7 +28,26 @@ Lead Information
 
 <p><strong>Lead Score:</strong> {{ lead.lead_score }}</p>
 
-<p><strong>Status:</strong> {{ lead.status }}</p>
+<p><strong>Status:</strong></p>
+
+<form method="POST" action="/leads/update_status/{{ lead.lead_id }}">
+
+<select class="form-control mb-2" name="status">
+
+<option value="new" {% if lead.status == "new" %}selected{% endif %}>New</option>
+<option value="contacted" {% if lead.status == "contacted" %}selected{% endif %}>Contacted</option>
+<option value="interested" {% if lead.status == "interested" %}selected{% endif %}>Interested</option>
+<option value="applied" {% if lead.status == "applied" %}selected{% endif %}>Applied</option>
+<option value="admitted" {% if lead.status == "admitted" %}selected{% endif %}>Admitted</option>
+<option value="lost" {% if lead.status == "lost" %}selected{% endif %}>Lost</option>
+
+</select>
+
+<button class="btn btn-primary btn-sm">
+Update Status
+</button>
+
+</form>
 
 <p><strong>Created:</strong> {{ lead.created_at }}</p>
 

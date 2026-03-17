@@ -204,6 +204,24 @@ def add_interaction(lead_id):
 
     return redirect(f"/leads/{lead_id}")
 
+@app.route("/leads/update_status/<int:lead_id>", methods=["POST"])
+def update_status(lead_id):
+
+    db = get_db()
+
+    new_status = request.form["status"]
+
+    db.execute("""
+        UPDATE leads
+        SET status = ?
+        WHERE lead_id = ?
+    """, (new_status, lead_id))
+
+    db.commit()
+
+    return redirect(f"/leads/{lead_id}")
+
+
 @app.route("/followups")
 def followups():
 
