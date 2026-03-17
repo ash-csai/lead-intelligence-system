@@ -26,41 +26,37 @@ def calculate_lead_score(lead):
 
 @app.route("/")
 def dashboard():
+
     db = get_db()
 
-    # Example counts
-    new_leads = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='new'"
-    ).fetchone()[0]
+    new = db.execute("SELECT COUNT(*) FROM leads WHERE status='new'").fetchone()[0]
+    contacted = db.execute("SELECT COUNT(*) FROM leads WHERE status='contacted'").fetchone()[0]
+    interested = db.execute("SELECT COUNT(*) FROM leads WHERE status='interested'").fetchone()[0]
+    applied = db.execute("SELECT COUNT(*) FROM leads WHERE status='applied'").fetchone()[0]
+    admitted = db.execute("SELECT COUNT(*) FROM leads WHERE status='admitted'").fetchone()[0]
+    lost = db.execute("SELECT COUNT(*) FROM leads WHERE status='lost'").fetchone()[0]
 
-    contacted = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='contacted'"
-    ).fetchone()[0]
+    total = db.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
 
-    interested = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='interested'"
-    ).fetchone()[0]
-
-    applied = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='applied'"
-    ).fetchone()[0]
-
-    admitted = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='admitted'"
-    ).fetchone()[0]
-
-    lost = db.execute(
-        "SELECT COUNT(*) FROM leads WHERE status='lost'"
-    ).fetchone()[0]
+    upcoming = db.execute("""
+        SELECT l.student_name, i.follow_up_date
+        FROM interactions i
+        JOIN leads l ON l.lead_id = i.lead_id
+        WHERE i.follow_up_date IS NOT NULL
+        ORDER BY i.follow_up_date ASC
+        LIMIT 5
+    """).fetchall()
 
     return render_template(
         "dashboard.html",
-        new=new_leads,
+        new=new,
         contacted=contacted,
         interested=interested,
         applied=applied,
         admitted=admitted,
-        lost=lost
+        lost=lost,
+        total=total,
+        upcoming=upcoming
     )
 
 @app.route("/leads/add", methods=["GET","POST"])

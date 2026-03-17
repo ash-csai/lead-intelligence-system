@@ -2,6 +2,19 @@
 
 {% block content %}
 
+<h2>Lead Intelligence Dashboard</h2>
+
+<div class="row mb-4">
+
+<div class="col-md-3">
+<div class="card text-center p-3">
+<h5>Total Leads</h5>
+<h3>{{ total }}</h3>
+</div>
+</div>
+
+</div>
+
 <h2>Lead Pipeline</h2>
 
 <div class="row">
@@ -61,5 +74,27 @@
 </div>
 
 </div>
+
+<hr>
+
+<h4>Upcoming Follow-ups</h4>
+
+<ul class="list-group mt-3">
+
+{% for u in upcoming %}
+
+<li class="list-group-item">
+<strong>{{ u.student_name }}</strong> — {{ u.follow_up_date }}
+</li>
+
+{% else %}
+
+<li class="list-group-item text-muted">
+No upcoming follow-ups
+</li>
+
+{% endfor %}
+
+</ul>
 
 {% endblock %}
