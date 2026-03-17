@@ -21,6 +21,30 @@
 <input type="text" name="city" class="form-control">
 </div>
 
+<div class="mb-2">
+<label>School</label>
+<select class="form-control" name="school_id">
+<option value="">Select School</option>
+{% for s in schools %}
+<option value="{{ s.institution_id }}">
+{{ s.name }}
+</option>
+{% endfor %}
+</select>
+</div>
+
+<div class="mb-2">
+<label>Coaching Centre</label>
+<select class="form-control" name="coaching_id">
+<option value="">Select Coaching</option>
+{% for c in coachings %}
+<option value="{{ c.institution_id }}">
+{{ c.name }}
+</option>
+{% endfor %}
+</select>
+</div>
+
 <div class="mb-3">
 <label>Course Interest</label>
 <input type="text" name="course_interest" class="form-control">

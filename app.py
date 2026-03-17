@@ -63,30 +63,59 @@ def dashboard():
         lost=lost
     )
 
-@app.route("/leads/add", methods=["GET", "POST"])
+@app.route("/leads/add", methods=["GET","POST"])
 def add_lead():
+
     db = get_db()
+
+    schools = db.execute("""
+        SELECT institution_id, name
+        FROM institutions
+        WHERE type='school'
+    """).fetchall()
+
+    coachings = db.execute("""
+        SELECT institution_id, name
+        FROM institutions
+        WHERE type='coaching_center'
+    """).fetchall()
 
     if request.method == "POST":
 
         student_name = request.form["student_name"]
         phone = request.form["phone"]
         city = request.form["city"]
+        school_id = request.form["school_id"]
+        coaching_id = request.form["coaching_id"]
         course_interest = request.form["course_interest"]
         interest_level = request.form["interest_level"]
         notes = request.form["notes"]
 
         db.execute("""
             INSERT INTO leads
-            (student_name, phone, city, course_interest, interest_level, notes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (student_name, phone, city, course_interest, interest_level, notes))
+            (student_name, phone, city, school_id, coaching_id,
+            course_interest, interest_level, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            student_name,
+            phone,
+            city,
+            school_id,
+            coaching_id,
+            course_interest,
+            interest_level,
+            notes
+        ))
 
         db.commit()
 
-        return redirect("/")
+        return redirect("/leads")
 
-    return render_template("add_lead.html")
+    return render_template(
+        "add_lead.html",
+        schools=schools,
+        coachings=coachings
+    )
 
 @app.route("/leads")
 def lead_list():
