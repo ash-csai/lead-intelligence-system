@@ -73,18 +73,16 @@ Back to Leads
 
 <h5>Add Interaction</h5>
 
-<form method="POST" action="/leads/{{ lead.lead_id }}/add_interaction">
+<form method="POST" action="/interactions/add/{{ lead.lead_id }}">
 
 <div class="mb-2">
 
 <label class="form-label">Interaction Type</label>
 
 <select name="interaction_type" class="form-control" required>
-<option value="Call">Call</option>
-<option value="Meeting">Meeting</option>
-<option value="WhatsApp">WhatsApp</option>
-<option value="Email">Email</option>
-<option value="Visit">Visit</option>
+<option value="call">Call</option>
+<option value="visit">Visit</option>
+<option value="application">Application</option>
 </select>
 
 </div>

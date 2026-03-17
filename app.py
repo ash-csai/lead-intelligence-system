@@ -221,6 +221,32 @@ def update_status(lead_id):
 
     return redirect(f"/leads/{lead_id}")
 
+@app.route("/interactions/add/<int:lead_id>", methods=["POST"])
+def auto_add_interaction(lead_id):
+
+    db = get_db()
+
+    interaction_type = request.form["interaction_type"]
+    notes = request.form["notes"]
+    follow_up_date = request.form["follow_up_date"]
+
+    db.execute("""
+        INSERT INTO interactions
+        (lead_id, interaction_type, notes, follow_up_date)
+        VALUES (?, ?, ?, ?)
+    """, (lead_id, interaction_type, notes, follow_up_date))
+
+    # 🔥 Smart Status Suggestion Logic
+    if interaction_type == "call":
+        db.execute("UPDATE leads SET status='contacted' WHERE lead_id=?", (lead_id,))
+    elif interaction_type == "visit":
+        db.execute("UPDATE leads SET status='interested' WHERE lead_id=?", (lead_id,))
+    elif interaction_type == "application":
+        db.execute("UPDATE leads SET status='applied' WHERE lead_id=?", (lead_id,))
+
+    db.commit()
+
+    return redirect(f"/leads/{lead_id}")
 
 @app.route("/followups")
 def followups():
