@@ -118,13 +118,35 @@ def lead_list():
 
     db = get_db()
 
-    leads = db.execute("""
+    city = request.args.get("city")
+    status = request.args.get("status")
+    course = request.args.get("course")
+
+    query = """
         SELECT lead_id, student_name, phone, city,
                course_interest, interest_level,
                status, created_at
         FROM leads
-        ORDER BY created_at DESC
-    """).fetchall()
+        WHERE 1=1
+    """
+
+    params = []
+
+    if city:
+        query += " AND city = ?"
+        params.append(city)
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    if course:
+        query += " AND course_interest = ?"
+        params.append(course)
+
+    query += " ORDER BY created_at DESC"
+
+    leads = db.execute(query, params).fetchall()
 
     return render_template("leads.html", leads=leads)
 
