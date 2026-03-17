@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect
 from database.db_connection import get_db
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -8,19 +9,58 @@ def calculate_lead_score(lead):
 
     score = 0
 
-    # Interest level scoring
+    # 🎯 1. Interest Level (base weight)
     if lead["interest_level"] == "high":
-        score += 40
+        score += 30
     elif lead["interest_level"] == "medium":
-        score += 25
-    elif lead["interest_level"] == "low":
+        score += 20
+    else:
         score += 10
 
-    # Status scoring
-    if lead["status"] == "interested":
-        score += 20
-    elif lead["status"] == "applied":
-        score += 30
+    db = get_db()
+
+    interactions = db.execute("""
+        SELECT *
+        FROM interactions
+        WHERE lead_id = ?
+        ORDER BY created_at DESC
+    """, (lead["lead_id"],)).fetchall()
+
+    # 🔁 2. Interaction Frequency
+    score += len(interactions) * 5
+
+    # ⏱ 3. Recency Boost
+    if interactions:
+        last_interaction = interactions[0]["created_at"]
+        last_date = datetime.strptime(last_interaction, "%Y-%m-%d %H:%M:%S")
+
+        days_gap = (datetime.now() - last_date).days
+
+        if days_gap <= 2:
+            score += 25
+        elif days_gap <= 7:
+            score += 15
+        elif days_gap <= 14:
+            score += 5
+        else:
+            score -= 10   # cold lead
+
+    # 🎬 4. Interaction Type Weight
+    for i in interactions:
+        if i["interaction_type"] == "application":
+            score += 20
+        elif i["interaction_type"] == "visit":
+            score += 10
+        elif i["interaction_type"] == "call":
+            score += 5
+
+    # 🏁 5. Status Weight
+    if lead["status"] == "applied":
+        score += 25
+    elif lead["status"] == "interested":
+        score += 15
+    elif lead["status"] == "contacted":
+        score += 5
 
     return score
 
@@ -199,6 +239,21 @@ def add_interaction(lead_id):
         (lead_id, interaction_type, notes, follow_up_date)
         VALUES (?, ?, ?, ?)
     """, (lead_id, interaction_type, notes, follow_up_date))
+
+    # Recalculate score after interaction
+    lead = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_id = ?
+    """, (lead_id,)).fetchone()
+
+    new_score = calculate_lead_score(lead)
+
+    db.execute("""
+        UPDATE leads
+        SET lead_score = ?
+        WHERE lead_id = ?
+    """, (new_score, lead_id))
 
     db.commit()
 
