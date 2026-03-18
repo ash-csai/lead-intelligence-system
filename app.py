@@ -87,6 +87,27 @@ def dashboard():
         LIMIT 5
     """).fetchall()
 
+    hot_leads = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_score >= 70
+        ORDER BY lead_score DESC
+    """).fetchall()
+
+    warm_leads = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_score BETWEEN 40 AND 69
+        ORDER BY lead_score DESC
+    """).fetchall()
+
+    cold_leads = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_score < 40
+        ORDER BY lead_score DESC
+    """).fetchall()
+
     return render_template(
         "dashboard.html",
         new=new,
@@ -96,7 +117,10 @@ def dashboard():
         admitted=admitted,
         lost=lost,
         total=total,
-        upcoming=upcoming
+        upcoming=upcoming,
+        hot_leads=hot_leads,
+        warm_leads=warm_leads,
+        cold_leads=cold_leads
     )
 
 @app.route("/leads/add", methods=["GET","POST"])

@@ -73,6 +73,41 @@
 </div>
 </div>
 
+<h3 class="mt-4">🔥 Hot Leads</h3>
+
+<ul class="list-group mb-4">
+{% for lead in hot_leads %}
+<li class="list-group-item d-flex justify-content-between">
+    {{ lead.student_name }}
+    <span class="badge bg-danger">{{ lead.lead_score }}</span>
+</li>
+{% endfor %}
+</ul>
+
+
+<h3>⚡ Warm Leads</h3>
+
+<ul class="list-group mb-4">
+{% for lead in warm_leads %}
+<li class="list-group-item d-flex justify-content-between">
+    {{ lead.student_name }}
+    <span class="badge bg-warning text-dark">{{ lead.lead_score }}</span>
+</li>
+{% endfor %}
+</ul>
+
+
+<h3>❄ Cold Leads</h3>
+
+<ul class="list-group">
+{% for lead in cold_leads %}
+<li class="list-group-item d-flex justify-content-between">
+    {{ lead.student_name }}
+    <span class="badge bg-secondary">{{ lead.lead_score }}</span>
+</li>
+{% endfor %}
+</ul>
+
 </div>
 
 <hr>
