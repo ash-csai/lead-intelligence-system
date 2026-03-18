@@ -173,4 +173,32 @@ No upcoming follow-ups
 
 </ul>
 
+<h3 class="mt-4">⚠️ Neglected Leads</h3>
+
+{% if inactive %}
+
+<ul class="list-group mb-4">
+
+{% for lead in inactive[:5] %}
+
+<li class="list-group-item d-flex justify-content-between">
+
+{{ lead.student_name }}
+
+<span class="badge bg-danger">
+{{ lead.days_idle }} days idle
+</span>
+
+</li>
+
+{% endfor %}
+
+</ul>
+
+{% else %}
+
+<p class="text-muted">No neglected leads 👍</p>
+
+{% endif %}
+
 {% endblock %}

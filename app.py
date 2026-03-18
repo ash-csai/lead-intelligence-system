@@ -119,6 +119,13 @@ def dashboard():
     """).fetchall()
     urgent = []
 
+    inactive_leads = db.execute("""
+        SELECT l.*, MAX(i.created_at) as last_interaction
+        FROM leads l
+        LEFT JOIN interactions i ON l.lead_id = i.lead_id
+        GROUP BY l.lead_id
+    """).fetchall()
+
     for lead in priority_leads:
         if lead["next_followup"]:
             followup_date = datetime.strptime(lead["next_followup"], "%Y-%m-%d").date()
@@ -138,27 +145,44 @@ def dashboard():
             lead_dict = dict(lead)
             lead_dict["priority_score"] = total_priority
             lead_dict["days_diff"] = days_diff
-            
+
             # 🧠 Reason Builder
             reasons = []
-            
+
             if days_diff < 0:
                 reasons.append("Overdue follow-up")
             elif days_diff == 0:
                 reasons.append("Follow-up today")
-            
+
             if lead["lead_score"] and lead["lead_score"] >= 70:
                 reasons.append("High-value lead")
-            
+
             if lead["lead_score"] and lead["lead_score"] < 40:
                 reasons.append("Low engagement")
-            
+
             lead_dict["reasons"] = ", ".join(reasons)
 
             urgent.append(lead_dict)
 
     # Sort by priority
     urgent = sorted(urgent, key=lambda x: x["priority_score"], reverse=True)
+
+    inactive = []
+
+    for lead in inactive_leads:
+
+        if lead["last_interaction"]:
+            last_date = datetime.strptime(lead["last_interaction"], "%Y-%m-%d %H:%M:%S")
+            days_idle = (datetime.now() - last_date).days
+
+            if days_idle >= 3:  # 🔥 threshold
+                lead_dict = dict(lead)
+                lead_dict["days_idle"] = days_idle
+                inactive.append(lead_dict)
+
+    #Sort by the worst cases
+    inactive = sorted(inactive, key=lambda x: x["days_idle"], reverse=True)
+
 
     return render_template(
         "dashboard.html",
@@ -173,7 +197,8 @@ def dashboard():
         hot_leads=hot_leads,
         warm_leads=warm_leads,
         cold_leads=cold_leads,
-        urgent=urgent
+        urgent=urgent,
+        inactive=inactive
     )
 
 @app.route("/leads/add", methods=["GET","POST"])
