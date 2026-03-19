@@ -17,7 +17,10 @@
 
 <small>
 Follow-up: {{ lead.next_followup }}<br>
-{{ lead.reasons }}
+
+{{ lead.reasons }}<br>
+<strong>👉 {{ lead.suggestion }}</strong>
+
 </small>
 {% if lead.days_diff < 0 %}
 <span class="text-danger">(Overdue)</span>

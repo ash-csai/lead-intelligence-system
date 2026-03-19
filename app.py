@@ -143,12 +143,10 @@ def dashboard():
             total_priority = urgency_score + (lead["lead_score"] or 0)
 
             lead_dict = dict(lead)
-            lead_dict["priority_score"] = total_priority
-            lead_dict["days_diff"] = days_diff
 
             # 🧠 Reason Builder
             reasons = []
-
+            
             if days_diff < 0:
                 reasons.append("Overdue follow-up")
             elif days_diff == 0:
@@ -164,6 +162,29 @@ def dashboard():
 
             urgent.append(lead_dict)
 
+            lead_dict["priority_score"] = total_priority
+            lead_dict["days_diff"] = days_diff
+            lead_dict["reasons"] = ", ".join(reasons)
+
+            # 🤖 Action Suggestion Engine
+
+            suggestion = "Review manually"
+
+            if lead_dict["days_diff"] <= 0:
+                suggestion = "Call immediately"
+
+            elif lead["lead_score"] and lead["lead_score"] >= 70:
+                suggestion = "Push for application"
+
+            elif lead["lead_score"] and lead["lead_score"] >= 40:
+                suggestion = "Follow-up (WhatsApp/Message)"
+
+            elif lead["lead_score"] < 40:
+                suggestion = "Low priority — nurture slowly"
+
+            lead_dict["suggestion"] = suggestion
+
+            
     # Sort by priority
     urgent = sorted(urgent, key=lambda x: x["priority_score"], reverse=True)
 
