@@ -144,6 +144,19 @@ def dashboard():
 
             lead_dict = dict(lead)
 
+            last_action = db.execute("""
+                SELECT interaction_type
+                FROM interactions
+                WHERE lead_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (lead["lead_id"],)).fetchone()
+
+            if last_action:
+                lead_dict["last_action"] = last_action["interaction_type"]
+            else:
+                lead_dict["last_action"] = None
+
             # 🧠 Reason Builder
             reasons = []
             
@@ -243,6 +256,21 @@ def add_lead():
 
         student_name = request.form["student_name"]
         phone = request.form["phone"]
+        # ✅ Validation
+        if not student_name:
+            return "Student name is required"
+        
+        if not phone:
+            return "Phone number is required"
+        
+        # ✅ Duplicate check
+        existing = db.execute("""
+            SELECT * FROM leads
+            WHERE phone = ?
+        """, (phone,)).fetchone()
+        
+        if existing:
+            return "Lead with this phone already exists"
         city = request.form["city"]
         school_id = request.form["school_id"]
         coaching_id = request.form["coaching_id"]
@@ -281,35 +309,22 @@ def lead_list():
 
     db = get_db()
 
-    city = request.args.get("city")
-    status = request.args.get("status")
-    course = request.args.get("course")
+    query = request.args.get("q")
 
-    query = """
-        SELECT lead_id, student_name, phone, city,
-               course_interest, interest_level,
-               status, created_at
-        FROM leads
-        WHERE 1=1
-    """
-
-    params = []
-
-    if city:
-        query += " AND city = ?"
-        params.append(city)
-
-    if status:
-        query += " AND status = ?"
-        params.append(status)
-
-    if course:
-        query += " AND course_interest = ?"
-        params.append(course)
-
-    query += " ORDER BY created_at DESC"
-
-    leads = db.execute(query, params).fetchall()
+    if query:
+        leads = db.execute("""
+            SELECT *
+            FROM leads
+            WHERE student_name LIKE ?
+            OR phone LIKE ?
+            ORDER BY created_at DESC
+        """, (f"%{query}%", f"%{query}%")).fetchall()
+    else:
+        leads = db.execute("""
+            SELECT *
+            FROM leads
+            ORDER BY created_at DESC
+        """).fetchall()
 
     return render_template("leads.html", leads=leads)
 
@@ -564,6 +579,79 @@ def add_institution():
         return redirect("/institutions")
 
     return render_template("add_institution.html")
+
+@app.route("/quick_action/<int:lead_id>", methods=["POST"])
+def quick_action(lead_id):
+
+    db = get_db()
+
+    action_type = request.form["action_type"]
+
+    # Store as interaction
+    db.execute("""
+        INSERT INTO interactions (lead_id, interaction_type, notes)
+        VALUES (?, ?, ?)
+    """, (lead_id, action_type, "Quick action performed"))
+
+    # 🔁 Recalculate score
+    lead = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_id = ?
+    """, (lead_id,)).fetchone()
+
+    new_score = calculate_lead_score(lead)
+
+    db.execute("""
+        UPDATE leads
+        SET lead_score = ?
+        WHERE lead_id = ?
+    """, (new_score, lead_id))
+
+    db.commit()
+
+    return redirect("/")
+
+@app.route("/leads/edit/<int:lead_id>", methods=["GET", "POST"])
+def edit_lead(lead_id):
+
+    db = get_db()
+
+    lead = db.execute("""
+        SELECT *
+        FROM leads
+        WHERE lead_id = ?
+    """, (lead_id,)).fetchone()
+
+    if request.method == "POST":
+
+        student_name = request.form["student_name"]
+        phone = request.form["phone"]
+        city = request.form["city"]
+        course_interest = request.form["course_interest"]
+        interest_level = request.form["interest_level"]
+        notes = request.form["notes"]
+
+        db.execute("""
+            UPDATE leads
+            SET student_name = ?, phone = ?, city = ?,
+                course_interest = ?, interest_level = ?, notes = ?
+            WHERE lead_id = ?
+        """, (
+            student_name,
+            phone,
+            city,
+            course_interest,
+            interest_level,
+            notes,
+            lead_id
+        ))
+
+        db.commit()
+
+        return redirect(f"/leads/{lead_id}")
+
+    return render_template("edit_lead.html", lead=lead)
 
 if __name__ == "__main__":
     app.run(debug=True)

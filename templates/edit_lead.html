@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Edit Lead</h2>
+
+<form method="POST">
+
+<div class="mb-2">
+<label>Name</label>
+<input name="student_name" class="form-control" value="{{ lead.student_name }}">
+</div>
+
+<div class="mb-2">
+<label>Phone</label>
+<input name="phone" class="form-control" value="{{ lead.phone }}">
+</div>
+
+<div class="mb-2">
+<label>City</label>
+<input name="city" class="form-control" value="{{ lead.city }}">
+</div>
+
+<div class="mb-2">
+<label>Course</label>
+<input name="course_interest" class="form-control" value="{{ lead.course_interest }}">
+</div>
+
+<div class="mb-2">
+<label>Interest Level</label>
+<input name="interest_level" class="form-control" value="{{ lead.interest_level }}">
+</div>
+
+<div class="mb-2">
+<label>Notes</label>
+<textarea name="notes" class="form-control">{{ lead.notes }}</textarea>
+</div>
+
+<button class="btn btn-primary">Update</button>
+
+</form>
+
+{% endblock %}

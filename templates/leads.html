@@ -4,6 +4,10 @@
 
 <h2>Leads</h2>
 
+<form method="GET" action="/leads" class="mb-3">
+    <input type="text" name="q" placeholder="Search by name or phone" class="form-control">
+</form>
+
 <form method="GET" class="row mb-3">
 
 <div class="col">
@@ -71,9 +75,12 @@
 
 <a class="btn btn-sm btn-primary"
 href="/leads/{{ lead.lead_id }}">
-
 View
+</a>
 
+<a class="btn btn-sm btn-warning"
+href="/leads/edit/{{ lead.lead_id }}">
+Edit
 </a>
 
 </td>
