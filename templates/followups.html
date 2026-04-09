@@ -1,83 +1,138 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex items-start md:items-center justify-between flex-col md:flex-row gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Follow-Up Action Center</h1>
+            <p class="text-sm text-slate-500 mt-1">Manage and track your scheduled interactions with leads.</p>
+        </div>
+        <div class="flex gap-2">
+            {% if overdue|length > 0 %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 shadow-sm border border-rose-200">
+                {{ overdue|length }} Overdue
+            </span>
+            {% endif %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 shadow-sm border border-indigo-200">
+                {{ today|length }} Today
+            </span>
+        </div>
+    </div>
 
-<h2 class="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Follow-Up Dashboard</h2>
+    <!-- Overdue Section -->
+    {% if overdue %}
+    <div class="mb-10">
+        <h3 class="text-sm font-bold text-rose-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            Action Required: Overdue ({{ overdue|length }})
+        </h3>
+        <div class="space-y-4">
+            {% for f in overdue %}
+            <div class="bg-rose-50 rounded-xl shadow-sm border border-rose-200 p-5 relative overflow-hidden group hover:shadow-md transition-shadow">
+                <!-- Red left accent bar -->
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500"></div>
+                
+                <div class="flex flex-col md:flex-row justify-between gap-4">
+                    <div class="flex-1 pl-2">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h4 class="font-bold text-slate-900 text-base">{{ f.student_name }}</h4>
+                            <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-200 text-rose-900 border border-rose-300">Target: {{ f.follow_up_date }}</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mb-3">
+                            <p class="text-xs text-slate-700 font-medium font-mono bg-white inline-flex items-center px-2 py-1 rounded border border-rose-200 shadow-sm">
+                                <svg class="w-3 h-3 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                {{ f.phone }}
+                            </p>
+                        </div>
+                        
+                        <div class="bg-white p-3.5 rounded-lg border border-rose-100 text-sm text-slate-700 shadow-inner">
+                            <span class="font-semibold text-rose-800 text-xs uppercase tracking-wider block mb-1">Previous Context</span>
+                            {{ f.notes }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
-<hr>
+    <!-- Today Section -->
+    <div class="mb-10">
+        <h3 class="text-sm font-bold text-indigo-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            Today's Focus ({{ today|length }})
+        </h3>
+        {% if today %}
+        <div class="space-y-4">
+            {% for f in today %}
+            <div class="bg-indigo-50/40 rounded-xl shadow-sm border border-indigo-200 p-5 relative overflow-hidden group hover:shadow-md transition-shadow">
+                <!-- Indigo left accent bar -->
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>
+                
+                <div class="flex flex-col md:flex-row justify-between gap-4">
+                    <div class="flex-1 pl-2">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="font-bold text-slate-900 text-base">{{ f.student_name }}</h4>
+                            <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">Date: {{ f.follow_up_date }}</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mb-3">
+                            <p class="text-xs text-slate-700 font-medium font-mono bg-white inline-flex items-center px-2 py-1 rounded border border-indigo-100 shadow-sm">
+                                <svg class="w-3 h-3 mr-1 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                {{ f.phone }}
+                            </p>
+                        </div>
+                        
+                        <div class="bg-white p-3.5 rounded-lg border border-indigo-100 text-sm text-slate-700 shadow-inner">
+                            <span class="font-semibold text-indigo-800 text-xs uppercase tracking-wider block mb-1">Objective / Notes</span>
+                            {{ f.notes }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-8 text-center text-slate-500">
+            <svg class="mx-auto h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <p class="font-medium text-slate-700">Clear queue!</p>
+            <p class="text-sm">You have no tasks scheduled for today.</p>
+        </div>
+        {% endif %}
+    </div>
 
-<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Today's Follow-ups</h4>
+    <!-- Upcoming Section -->
+    <div class="mb-8">
+        <h3 class="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            On the Horizon ({{ upcoming|length }})
+        </h3>
+        {% if upcoming %}
+        <div class="space-y-4">
+            {% for f in upcoming %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:border-slate-300 transition-colors">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <h4 class="font-bold text-slate-800 text-sm">{{ f.student_name }}</h4>
+                            <span class="text-[11px] font-semibold text-slate-500 px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200">{{ f.follow_up_date }}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 font-mono mb-3">📞 {{ f.phone }}</p>
+                        <p class="text-sm text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">{{ f.notes }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-slate-50 border border-slate-200 border-dashed rounded-xl p-8 text-center text-slate-400">
+            <p>No upcoming tasks lined up.</p>
+        </div>
+        {% endif %}
+    </div>
 
-<ul class="list-group mb-4">
-
-{% for f in today %}
-
-<li class="p-4 hover:bg-slate-50 transition-colors">
-
-<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
-{{ f.notes }}<br>
-<small>Follow-up: {{ f.follow_up_date }}</small>
-
-</li>
-
-{% else %}
-
-<li class="list-group-item text-muted">
-No follow-ups today
-</li>
-
-{% endfor %}
-
-</ul>
-
-
-<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Overdue Follow-ups</h4>
-
-<ul class="list-group mb-4">
-
-{% for f in overdue %}
-
-<li class="list-group-item list-group-item-danger">
-
-<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
-{{ f.notes }}<br>
-<small>Follow-up: {{ f.follow_up_date }}</small>
-
-</li>
-
-{% else %}
-
-<li class="list-group-item text-muted">
-No overdue follow-ups
-</li>
-
-{% endfor %}
-
-</ul>
-
-
-<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Upcoming Follow-ups</h4>
-
-<ul class="divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
-
-{% for f in upcoming %}
-
-<li class="p-4 hover:bg-slate-50 transition-colors">
-
-<strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
-{{ f.notes }}<br>
-<small>Follow-up: {{ f.follow_up_date }}</small>
-
-</li>
-
-{% else %}
-
-<li class="list-group-item text-muted">
-No upcoming follow-ups
-</li>
-
-{% endfor %}
-
-</ul>
-
+</div>
 {% endblock %}
