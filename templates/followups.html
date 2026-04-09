@@ -2,17 +2,17 @@
 
 {% block content %}
 
-<h2>Follow-Up Dashboard</h2>
+<h2 class="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Follow-Up Dashboard</h2>
 
 <hr>
 
-<h4>Today's Follow-ups</h4>
+<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Today's Follow-ups</h4>
 
 <ul class="list-group mb-4">
 
 {% for f in today %}
 
-<li class="list-group-item">
+<li class="p-4 hover:bg-slate-50 transition-colors">
 
 <strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
 {{ f.notes }}<br>
@@ -31,7 +31,7 @@ No follow-ups today
 </ul>
 
 
-<h4>Overdue Follow-ups</h4>
+<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Overdue Follow-ups</h4>
 
 <ul class="list-group mb-4">
 
@@ -56,13 +56,13 @@ No overdue follow-ups
 </ul>
 
 
-<h4>Upcoming Follow-ups</h4>
+<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Upcoming Follow-ups</h4>
 
-<ul class="list-group">
+<ul class="divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
 
 {% for f in upcoming %}
 
-<li class="list-group-item">
+<li class="p-4 hover:bg-slate-50 transition-colors">
 
 <strong>{{ f.student_name }}</strong> ({{ f.phone }})<br>
 {{ f.notes }}<br>

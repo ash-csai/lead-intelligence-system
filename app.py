@@ -651,7 +651,7 @@ def edit_lead(lead_id):
 
         return redirect(f"/leads/{lead_id}")
 
-    return render_template("edit_lead.html", lead=lead)
+    return render_template("edit_lead.html", lead=lead)    
 
 if __name__ == "__main__":
     app.run(debug=True)

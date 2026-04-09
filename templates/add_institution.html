@@ -2,18 +2,18 @@
 
 {% block content %}
 
-<h2>Add Institution</h2>
+<h2 class="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Add Institution</h2>
 
 <form method="POST">
 
 <div class="mb-2">
 <label>Name</label>
-<input class="form-control" name="name" required>
+<input class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="name" required>
 </div>
 
 <div class="mb-2">
 <label>Type</label>
-<select class="form-control" name="type">
+<select class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="type">
 <option value="school">School</option>
 <option value="coaching_center">Coaching Centre</option>
 </select>
@@ -21,25 +21,25 @@
 
 <div class="mb-2">
 <label>City</label>
-<input class="form-control" name="city">
+<input class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="city">
 </div>
 
 <div class="mb-2">
 <label>Contact Person</label>
-<input class="form-control" name="contact_person">
+<input class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="contact_person">
 </div>
 
 <div class="mb-2">
 <label>Contact Phone</label>
-<input class="form-control" name="contact_phone">
+<input class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="contact_phone">
 </div>
 
 <div class="mb-2">
 <label>Notes</label>
-<textarea class="form-control" name="notes"></textarea>
+<textarea class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="notes"></textarea>
 </div>
 
-<button class="btn btn-primary">
+<button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-colors text-sm">
 Save
 </button>
 

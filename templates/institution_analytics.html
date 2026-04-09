@@ -2,17 +2,17 @@
 
 {% block content %}
 
-<h2>Institution Influence Dashboard</h2>
+<h2 class="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Institution Influence Dashboard</h2>
 
 <hr>
 
-<h4>Top Schools by Leads</h4>
+<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Top Schools by Leads</h4>
 
 <ul class="list-group mb-4">
 
 {% for s in school_stats %}
 
-<li class="list-group-item">
+<li class="p-4 hover:bg-slate-50 transition-colors">
 {{ s.name }} — {{ s.total_leads }} leads
 </li>
 
@@ -27,13 +27,13 @@ No schools recorded yet
 </ul>
 
 
-<h4>Top Coaching Centres by Leads</h4>
+<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">Top Coaching Centres by Leads</h4>
 
-<ul class="list-group">
+<ul class="divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
 
 {% for c in coaching_stats %}
 
-<li class="list-group-item">
+<li class="p-4 hover:bg-slate-50 transition-colors">
 {{ c.name }} — {{ c.total_leads }} leads
 </li>
 

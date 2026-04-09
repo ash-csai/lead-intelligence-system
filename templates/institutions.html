@@ -2,39 +2,39 @@
 
 {% block content %}
 
-<h2>Institutions</h2>
+<h2 class="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Institutions</h2>
 
 <a class="btn btn-success mb-3" href="/institutions/add">
 Add Institution
 </a>
 
-<table class="table table-striped">
+<div class="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200 mb-6"><table class="w-full text-left border-collapse text-sm">
 
-<thead>
+<thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
 
-<tr>
+<tr class="hover:bg-slate-50 transition-colors">
 
-<th>Name</th>
-<th>Type</th>
-<th>City</th>
-<th>Contact Person</th>
-<th>Phone</th>
+<th class="px-6 py-4">Name</th>
+<th class="px-6 py-4">Type</th>
+<th class="px-6 py-4">City</th>
+<th class="px-6 py-4">Contact Person</th>
+<th class="px-6 py-4">Phone</th>
 
 </tr>
 
 </thead>
 
-<tbody>
+<tbody class="divide-y divide-slate-100 text-slate-700">
 
 {% for i in institutions %}
 
-<tr>
+<tr class="hover:bg-slate-50 transition-colors">
 
-<td>{{ i.name }}</td>
-<td>{{ i.type }}</td>
-<td>{{ i.city }}</td>
-<td>{{ i.contact_person }}</td>
-<td>{{ i.contact_phone }}</td>
+<td class="px-6 py-4">{{ i.name }}</td>
+<td class="px-6 py-4">{{ i.type }}</td>
+<td class="px-6 py-4">{{ i.city }}</td>
+<td class="px-6 py-4">{{ i.contact_person }}</td>
+<td class="px-6 py-4">{{ i.contact_phone }}</td>
 
 </tr>
 
@@ -42,6 +42,6 @@ Add Institution
 
 </tbody>
 
-</table>
+</table></div>
 
 {% endblock %}

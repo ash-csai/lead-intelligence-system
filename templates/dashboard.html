@@ -2,230 +2,209 @@
 
 {% block content %}
 
-<h2>📌 Today's Priority Actions</h2>
-
-{% if urgent %}
-
-<ul class="list-group mb-4">
-
-{% for lead in urgent[:5] %}
-
-<li class="list-group-item d-flex justify-content-between align-items-center">
-
-<form method="POST" action="/quick_action/{{ lead.lead_id }}" class="mt-2 d-flex gap-2">
-
-{% if lead.last_action == "call" %}
-<button class="btn btn-sm btn-success" disabled>✔ Done</button>
-{% else %}
-<button name="action_type" value="call" class="btn btn-sm btn-success">
-📞 Call
-</button>
-{% endif %}
-
-<button name="action_type" value="whatsapp" class="btn btn-sm btn-warning">
-💬 WhatsApp
-</button>
-
-<button name="action_type" value="email" class="btn btn-sm btn-primary">
-📧 Email
-</button>
-
-<button name="action_type" value="visit" class="btn btn-sm btn-dark">
-🏫 Visit
-</button>
-
-</form>
-
-<div>
-<strong>{{ lead.student_name }}</strong><br>
-
-<small>
-Follow-up: {{ lead.next_followup }}<br>
-
-{{ lead.reasons }}<br>
-<strong>👉 {{ lead.suggestion }}</strong>
-
-</small>
-{% if lead.days_diff < 0 %}
-<span class="text-danger">(Overdue)</span>
-{% elif lead.days_diff == 0 %}
-<span class="text-warning">(Today)</span>
-{% endif %}
-</small>
+<!-- Header -->
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+        <p class="text-sm text-slate-500 mt-1">Welcome back. Here's a quick look at your lead pipeline and priorities.</p>
+    </div>
 </div>
 
-<span class="badge bg-dark">
-{{ lead.priority_score }}
-</span>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    
+    <!-- Left Column (Urgent Actions & Pipeline) -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Priority Actions -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                    <span class="text-rose-500">📌</span> Today's Priority Actions
+                </h2>
+            </div>
+            <div class="p-0">
+                {% if urgent %}
+                    <ul class="divide-y divide-slate-100">
+                    {% for lead in urgent[:5] %}
+                        <li class="p-6 hover:bg-slate-50 transition-colors flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                            <!-- User info -->
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold shrink-0 text-sm">
+                                    {{ lead.student_name[:2] | upper }}
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-slate-900 flex items-center flex-wrap gap-2">
+                                        {{ lead.student_name }}
+                                        {% if lead.days_diff < 0 %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">Overdue</span>
+                                        {% elif lead.days_diff == 0 %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">Today</span>
+                                        {% endif %}
+                                        <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-slate-800 text-white font-bold text-[10px]" title="Priority Score">
+                                            {{ lead.priority_score }}
+                                        </span>
+                                    </h4>
+                                    <p class="text-sm text-slate-500 mt-1">Follow-up: <span class="text-slate-700 font-medium">{{ lead.next_followup }}</span></p>
+                                    <p class="text-sm text-slate-600 mt-1 pl-3 border-l-2 border-indigo-200 italic">{{ lead.suggestion }}</p>
+                                </div>
+                            </div>
 
-</li>
+                            <!-- Actions Form -->
+                            <form method="POST" action="/quick_action/{{ lead.lead_id }}" class="flex flex-wrap items-center gap-2 mt-2 xl:mt-0 xl:ml-4">
+                                {% if lead.last_action == "call" %}
+                                    <button disabled class="inline-flex py-1.5 px-3 rounded-lg bg-emerald-50 text-emerald-600 text-sm font-semibold border border-emerald-100">✔ Done</button>
+                                {% else %}
+                                    <button name="action_type" value="call" class="inline-flex py-1.5 px-3 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 text-sm font-semibold border border-indigo-100 transition-colors shadow-sm">📞 Call</button>
+                                {% endif %}
+                                <button name="action_type" value="whatsapp" class="inline-flex py-1.5 px-3 rounded-lg bg-[#E8F8F5] text-[#075E54] hover:bg-[#D1F2EB] text-sm font-semibold border border-[#A3E4D7] transition-colors shadow-sm">💬 WA</button>
+                                <button name="action_type" value="email" class="inline-flex py-1.5 px-3 rounded-lg bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold border border-slate-300 transition-colors shadow-sm">📧 Email</button>
+                                <button name="action_type" value="visit" class="inline-flex py-1.5 px-3 rounded-lg bg-slate-800 text-white hover:bg-slate-700 text-sm font-semibold border border-slate-800 transition-colors shadow-sm">🏫 Visit</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="py-12 text-center text-slate-500">
+                        <span class="text-4xl mb-3 block">🎉</span>
+                        <p class="font-medium text-slate-700">All caught up!</p>
+                        <p class="text-sm">No urgent follow-ups right now.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Pipeline Component -->
+        <h2 class="text-lg font-semibold text-slate-800 mt-8 mb-4">Lead Pipeline Overview</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-indigo-300 transition-colors relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors"></div>
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span> New</p>
+                <p class="text-3xl font-bold text-slate-900 mt-3 relative z-10">{{ new }}</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-indigo-300 transition-colors relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-50 rounded-full group-hover:bg-indigo-100 transition-colors"></div>
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> Contacted</p>
+                <p class="text-3xl font-bold text-slate-900 mt-3 relative z-10">{{ contacted }}</p>
+            </div>
 
-{% endfor %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-indigo-300 transition-colors relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-purple-50 rounded-full group-hover:bg-purple-100 transition-colors"></div>
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span> Interested</p>
+                <p class="text-3xl font-bold text-slate-900 mt-3 relative z-10">{{ interested }}</p>
+            </div>
 
-</ul>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-indigo-300 transition-colors relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-50 rounded-full group-hover:bg-amber-100 transition-colors"></div>
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Applied</p>
+                <p class="text-3xl font-bold text-slate-900 mt-3 relative z-10">{{ applied }}</p>
+            </div>
 
-{% else %}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-indigo-300 transition-colors relative overflow-hidden border-b-4 hover:border-b-emerald-400 border-b-emerald-500">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors"></div>
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> Admitted</p>
+                <p class="text-3xl font-bold text-slate-900 mt-3 relative z-10">{{ admitted }}</p>
+            </div>
 
-<p class="text-muted">No urgent follow-ups 🎉</p>
+            <div class="bg-slate-50 rounded-xl shadow-sm border border-slate-200 p-5 group hover:border-slate-300 transition-colors relative overflow-hidden opacity-80">
+                <p class="text-sm font-semibold text-slate-500 relative z-10 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-slate-400"></span> Lost</p>
+                <p class="text-3xl font-bold text-slate-600 mt-3 relative z-10">{{ lost }}</p>
+            </div>
+        </div>
+    </div>
 
-{% endif %}
+    <!-- Right Column (Stats & Secondary Metrics) -->
+    <div class="space-y-6">
+        
+        <!-- Hero Stat -->
+        <div class="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl shadow-lg p-6 text-white relative overflow-hidden shadow-indigo-200">
+            <div class="absolute -right-8 -top-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
+            <h3 class="text-indigo-100 font-medium tracking-wider text-xs uppercase mb-1 relative z-10">Total Database</h3>
+            <p class="text-5xl font-bold relative z-10 tracking-tight">{{ total }} <span class="text-indigo-200 text-lg font-medium">Leads</span></p>
+        </div>
 
-<h2>Lead Intelligence Dashboard</h2>
+        <!-- Filtered Temperature Lists -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
+            
+            <!-- Hot Leads -->
+            <div class="p-5 bg-gradient-to-b from-white to-rose-50/20">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3"><span class="text-rose-500">🔥</span> Hot Leads</h3>
+                <ul class="space-y-2">
+                    {% for lead in hot_leads[:5] %}
+                        <li class="flex items-center justify-between p-2.5 rounded-lg bg-white border border-rose-100 shadow-sm group hover:border-rose-300 transition-colors">
+                            <span class="font-semibold text-sm text-slate-700 truncate mr-3">{{ lead.student_name }}</span>
+                            <span class="px-2.5 py-1 rounded text-xs font-bold bg-rose-100 text-rose-800 tabular-nums">{{ lead.lead_score }}</span>
+                        </li>
+                    {% else %}
+                        <li class="text-xs text-slate-500 italic p-2 bg-slate-50 rounded border border-slate-100 text-center">No hot leads yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
 
-<div class="row mb-4">
+            <!-- Warm Leads -->
+            <div class="p-5 bg-gradient-to-b from-white to-amber-50/20">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3"><span class="text-amber-500">⚡</span> Warm Leads</h3>
+                <ul class="space-y-2">
+                    {% for lead in warm_leads[:4] %}
+                        <li class="flex items-center justify-between p-2.5 rounded-lg bg-white border border-amber-100 shadow-sm group hover:border-amber-300 transition-colors">
+                            <span class="font-medium text-sm text-slate-700 truncate mr-3">{{ lead.student_name }}</span>
+                            <span class="px-2.5 py-1 rounded text-xs font-bold bg-amber-100 text-amber-800 tabular-nums">{{ lead.lead_score }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
 
-<div class="col-md-3">
-<div class="card text-center p-3">
-<h5>Total Leads</h5>
-<h3>{{ total }}</h3>
+            <!-- Cold Leads -->
+            <div class="p-5">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3"><span class="text-slate-400">❄</span> Cold Leads</h3>
+                <ul class="space-y-2">
+                    {% for lead in cold_leads[:4] %}
+                        <li class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
+                            <span class="font-medium text-sm text-slate-600 truncate mr-3">{{ lead.student_name }}</span>
+                            <span class="px-2.5 py-1 rounded text-xs font-bold bg-slate-200 text-slate-700 tabular-nums">{{ lead.lead_score }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Upcoming & Alerts -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                <h3 class="font-semibold text-slate-800 text-sm">📅 Planned Follow-ups</h3>
+            </div>
+            <ul class="divide-y divide-slate-100 p-2">
+                {% for u in upcoming[:4] %}
+                    <li class="p-3 text-sm flex justify-between items-center hover:bg-slate-50 rounded-lg transition-colors group">
+                        <span class="font-medium text-slate-700">{{ u.student_name }}</span>
+                        <span class="text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded text-xs font-medium">{{ u.follow_up_date }}</span>
+                    </li>
+                {% else %}
+                    <li class="p-4 text-center text-sm text-slate-500 italic">No scheduled follow-ups.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        {% if inactive %}
+        <div class="bg-white rounded-xl shadow-sm border border-rose-200 overflow-hidden relative">
+            <!-- Left accent strip -->
+            <div class="absolute top-0 left-0 w-1.5 h-full bg-rose-500"></div>
+            <div class="px-5 py-3.5 border-b border-rose-100 flex items-center justify-between pl-6 bg-rose-50/50">
+                <h3 class="font-semibold text-rose-800 text-sm flex items-center gap-2">⚠️ Neglected Leads</h3>
+            </div>
+            <ul class="divide-y divide-rose-50 p-2 pl-3">
+                {% for lead in inactive[:4] %}
+                    <li class="p-3 text-sm flex justify-between items-center hover:bg-rose-50/30 rounded-lg transition-colors">
+                        <span class="font-medium text-slate-800">{{ lead.student_name }}</span>
+                        <span class="text-rose-700 bg-rose-50 border border-rose-100 px-2 py-1 rounded text-xs font-bold shadow-sm">{{ lead.days_idle }} days idle</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+    </div>
+
 </div>
-</div>
-
-</div>
-
-<h2>Lead Pipeline</h2>
-
-<div class="row">
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>New</h5>
-<p>{{ new }}</p>
-</div>
-</div>
-</div>
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>Contacted</h5>
-<p>{{ contacted }}</p>
-</div>
-</div>
-</div>
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>Interested</h5>
-<p>{{ interested }}</p>
-</div>
-</div>
-</div>
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>Applied</h5>
-<p>{{ applied }}</p>
-</div>
-</div>
-</div>
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>Admitted</h5>
-<p>{{ admitted }}</p>
-</div>
-</div>
-</div>
-
-<div class="col">
-<div class="card text-center">
-<div class="card-body">
-<h5>Lost</h5>
-<p>{{ lost }}</p>
-</div>
-</div>
-</div>
-
-<h3 class="mt-4">🔥 Hot Leads</h3>
-
-<ul class="list-group mb-4">
-{% for lead in hot_leads %}
-<li class="list-group-item d-flex justify-content-between">
-    {{ lead.student_name }}
-    <span class="badge bg-danger">{{ lead.lead_score }}</span>
-</li>
-{% endfor %}
-</ul>
-
-
-<h3>⚡ Warm Leads</h3>
-
-<ul class="list-group mb-4">
-{% for lead in warm_leads %}
-<li class="list-group-item d-flex justify-content-between">
-    {{ lead.student_name }}
-    <span class="badge bg-warning text-dark">{{ lead.lead_score }}</span>
-</li>
-{% endfor %}
-</ul>
-
-
-<h3>❄ Cold Leads</h3>
-
-<ul class="list-group">
-{% for lead in cold_leads %}
-<li class="list-group-item d-flex justify-content-between">
-    {{ lead.student_name }}
-    <span class="badge bg-secondary">{{ lead.lead_score }}</span>
-</li>
-{% endfor %}
-</ul>
-
-</div>
-
-<hr>
-
-<h4>Upcoming Follow-ups</h4>
-
-<ul class="list-group mt-3">
-
-{% for u in upcoming %}
-
-<li class="list-group-item">
-<strong>{{ u.student_name }}</strong> — {{ u.follow_up_date }}
-</li>
-
-{% else %}
-
-<li class="list-group-item text-muted">
-No upcoming follow-ups
-</li>
-
-{% endfor %}
-
-</ul>
-
-<h3 class="mt-4">⚠️ Neglected Leads</h3>
-
-{% if inactive %}
-
-<ul class="list-group mb-4">
-
-{% for lead in inactive[:5] %}
-
-<li class="list-group-item d-flex justify-content-between">
-
-{{ lead.student_name }}
-
-<span class="badge bg-danger">
-{{ lead.days_idle }} days idle
-</span>
-
-</li>
-
-{% endfor %}
-
-</ul>
-
-{% else %}
-
-<p class="text-muted">No neglected leads 👍</p>
-
-{% endif %}
 
 {% endblock %}

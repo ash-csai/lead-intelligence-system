@@ -1,62 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Intelligence System</title>
 
-    <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-    rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        slate: {
+                            50: '#f8fafc',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </head>
+<body class="bg-slate-50 font-sans text-slate-900 antialiased h-screen flex overflow-hidden">
 
-<body>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col h-full shadow-xl z-20 hidden md:flex shrink-0">
+        <div class="p-6 pb-2">
+            <a href="/" class="text-white text-xl font-bold tracking-tight">Lead Intelligence</a>
+            <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">CRM System</p>
+        </div>
+        
+        <nav class="flex-1 px-4 mt-6 space-y-1 overflow-y-auto">
+            <a href="/" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">Dashboard</a>
+            
+            <p class="px-4 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Leads</p>
+            <a href="/leads" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200 text-indigo-400">View Leads</a>
+            <a href="/leads/add" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">Add Lead +</a>
+            
+            <p class="px-4 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Institutions</p>
+            <a href="/institutions" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">View Institutions</a>
+            
+            <p class="px-4 mt-6 mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Performance</p>
+            <a href="/analytics" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">General Analytics</a>
+            <a href="/institutions/analytics" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">Inst. Analytics</a>
+            <a href="/followups" class="block px-4 py-2.5 rounded-lg hover:bg-slate-800 hover:text-white transition-colors duration-200">Follow-ups</a>
+        </nav>
 
-<!-- Navbar -->
+        <div class="p-4 border-t border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                    AD
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-white">Admin User</p>
+                    <p class="text-xs text-slate-400">Manage System</p>
+                </div>
+            </div>
+        </div>
+    </aside>
 
-<nav class="navbar navbar-dark bg-dark">
+    <!-- Main Content wrapper -->
+    <div class="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        <!-- Top Navbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm shrink-0 z-10">
+            <!-- Search Bar (Top) -->
+            <div class="flex-1 max-w-lg">
+                <form method="GET" action="/leads" class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </span>
+                    <input type="text" name="q" placeholder="Search leads by name or phone..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow bg-slate-50 focus:bg-white text-sm" />
+                </form>
+            </div>
 
-<div class="container-fluid">
+            <!-- Header Actions -->
+            <div class="flex items-center gap-4">
+                <button class="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                </button>
+            </div>
+        </header>
 
-<a class="navbar-brand" href="/">
-Lead Intelligence System
-</a>
-
-<div class="d-flex">
-
-<a class="btn btn-outline-light me-2" href="/institutions">
-Institutions
-</a>
-
-<a class="btn btn-outline-light me-2" href="/institutions/analytics">
-Institutions Analytics
-</a>
-
-<a class="btn btn-outline-light me-2" href="/analytics">
-Analytics
-</a>
-
-<a class="btn btn-outline-light me-2" href="/followups">
-Follow-ups
-</a>
-
-<a class="btn btn-light me-2" href="/leads">
-View Leads
-</a>
-
-<a class="btn btn-success" href="/leads/add">
-Add Lead
-</a>
-
-</div>
-
-</div>
-
-</nav>
-
-<!-- Main Page Content -->
-
-<div class="container mt-4">
-{% block content %}{% endblock %}
-</div>
+        <!-- Main Scrollable Area -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8">
+            <div class="max-w-7xl mx-auto">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+        
+    </div>
 
 </body>
 </html>
