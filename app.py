@@ -482,25 +482,25 @@ def analytics():
 
     db = get_db()
 
-    city_stats = db.execute("""
+    city_stats = [dict(row) for row in db.execute("""
         SELECT city, COUNT(*) as total
         FROM leads
         GROUP BY city
         ORDER BY total DESC
-    """).fetchall()
+    """).fetchall()]
 
-    source_stats = db.execute("""
+    source_stats = [dict(row) for row in db.execute("""
         SELECT lead_source, COUNT(*) as total
         FROM leads
         GROUP BY lead_source
         ORDER BY total DESC
-    """).fetchall()
+    """).fetchall()]
 
-    status_stats = db.execute("""
+    status_stats = [dict(row) for row in db.execute("""
         SELECT status, COUNT(*) as total
         FROM leads
         GROUP BY status
-    """).fetchall()
+    """).fetchall()]
 
     return render_template(
         "analytics.html",
