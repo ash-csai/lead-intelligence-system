@@ -180,12 +180,6 @@ Contributions, suggestions, and improvements are welcome. Feel free to fork the 
 
 ---
 
-# License
-
-This project is released under the MIT License.
-
----
-
 ## Author
 
 **ASH**
