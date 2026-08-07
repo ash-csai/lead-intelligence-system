@@ -319,15 +319,33 @@ def lead_list():
     db = get_db()
 
     query = request.args.get("q")
+    city = request.args.get("city")
+    status = request.args.get("status")
+    course = request.args.get("course")
+
+    filters = []
+    params = []
 
     if query:
-        leads = db.execute("""
+        filters.append("(student_name LIKE ? OR phone LIKE ?)")
+        params.extend((f"%{query}%", f"%{query}%"))
+    if city:
+        filters.append("city = ?")
+        params.append(city)
+    if status:
+        filters.append("status = ?")
+        params.append(status)
+    if course:
+        filters.append("course_interest = ?")
+        params.append(course)
+
+    if filters:
+        where_clause = " WHERE " + " AND ".join(filters)
+        leads = db.execute(f"""
             SELECT *
-            FROM leads
-            WHERE student_name LIKE ?
-            OR phone LIKE ?
+            FROM leads{where_clause}
             ORDER BY created_at DESC
-        """, (f"%{query}%", f"%{query}%")).fetchall()
+        """, params).fetchall()
     else:
         leads = db.execute("""
             SELECT *
