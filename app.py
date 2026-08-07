@@ -284,14 +284,15 @@ def add_lead():
         school_id = normalize_form_input("school_id", request.form["school_id"])
         coaching_id = normalize_form_input("coaching_id", request.form["coaching_id"])
         course_interest = request.form["course_interest"]
+        lead_source = request.form["lead_source"]
         interest_level = normalize_form_input("interest_level", request.form["interest_level"])
         notes = request.form["notes"]
 
         db.execute("""
             INSERT INTO leads
             (student_name, phone, city, school_id, coaching_id,
-            course_interest, interest_level, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            course_interest, lead_source, interest_level, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             student_name,
             phone,
@@ -299,6 +300,7 @@ def add_lead():
             school_id,
             coaching_id,
             course_interest,
+            lead_source,
             interest_level,
             notes
         ))
