@@ -110,7 +110,7 @@ Core entities include:
 # Installation
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/ash-csai/lead-intelligence-system
 cd Lead-Intelligence-System
 ```
 
