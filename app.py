@@ -1,70 +1,11 @@
 from flask import Flask, render_template, request, redirect, abort
 from database.db_connection import get_db, close_db
+from modules.scoring_engine import calculate_lead_score, HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
 app.teardown_appcontext(close_db)
-
-def calculate_lead_score(lead):
-
-    score = 0
-
-    # 🎯 1. Interest Level (base weight)
-    if lead["interest_level"] == "high":
-        score += 30
-    elif lead["interest_level"] == "medium":
-        score += 20
-    else:
-        score += 10
-
-    db = get_db()
-
-    interactions = db.execute("""
-        SELECT *
-        FROM interactions
-        WHERE lead_id = ?
-        ORDER BY created_at DESC
-    """, (lead["lead_id"],)).fetchall()
-
-    # 🔁 2. Interaction Frequency
-    score += len(interactions) * 5
-
-    # ⏱ 3. Recency Boost
-    if interactions:
-        last_interaction = interactions[0]["created_at"]
-        last_date = datetime.strptime(last_interaction, "%Y-%m-%d %H:%M:%S")
-
-        days_gap = (datetime.now() - last_date).days
-
-        if days_gap <= 2:
-            score += 25
-        elif days_gap <= 7:
-            score += 15
-        elif days_gap <= 14:
-            score += 5
-        else:
-            score -= 10   # cold lead
-
-    # 🎬 4. Interaction Type Weight
-    for i in interactions:
-        if i["interaction_type"] == "application":
-            score += 20
-        elif i["interaction_type"] == "visit":
-            score += 10
-        elif i["interaction_type"] == "call":
-            score += 5
-
-    # 🏁 5. Status Weight
-    if lead["status"] == "applied":
-        score += 25
-    elif lead["status"] == "interested":
-        score += 15
-    elif lead["status"] == "contacted":
-        score += 5
-
-    return score
-
 
 def normalize_form_input(field_name, value):
     if field_name in {"school_id", "coaching_id", "follow_up_date"} and value == "":
@@ -99,23 +40,23 @@ def dashboard():
     hot_leads = db.execute("""
         SELECT *
         FROM leads
-        WHERE lead_score >= 70
+        WHERE lead_score >= ?
         ORDER BY lead_score DESC
-    """).fetchall()
+    """, (HOT_LEAD_THRESHOLD,)).fetchall()
 
     warm_leads = db.execute("""
         SELECT *
         FROM leads
-        WHERE lead_score BETWEEN 40 AND 69
+        WHERE lead_score >= ? AND lead_score < ?
         ORDER BY lead_score DESC
-    """).fetchall()
+    """, (WARM_LEAD_THRESHOLD, HOT_LEAD_THRESHOLD)).fetchall()
 
     cold_leads = db.execute("""
         SELECT *
         FROM leads
-        WHERE lead_score < 40
+        WHERE lead_score < ?
         ORDER BY lead_score DESC
-    """).fetchall()
+    """, (WARM_LEAD_THRESHOLD,)).fetchall()
 
     today = datetime.now().date()
 
@@ -180,10 +121,10 @@ def dashboard():
             elif days_diff == 0:
                 reasons.append("Follow-up today")
 
-            if lead["lead_score"] and lead["lead_score"] >= 70:
+            if lead["lead_score"] and lead["lead_score"] >= HOT_LEAD_THRESHOLD:
                 reasons.append("High-value lead")
 
-            if lead["lead_score"] and lead["lead_score"] < 40:
+            if lead["lead_score"] and lead["lead_score"] < WARM_LEAD_THRESHOLD:
                 reasons.append("Low engagement")
 
             lead_dict["reasons"] = ", ".join(reasons)
@@ -412,7 +353,14 @@ def add_interaction(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
-    new_score = calculate_lead_score(lead)
+    interactions = db.execute("""
+        SELECT *
+        FROM interactions
+        WHERE lead_id = ?
+        ORDER BY created_at DESC
+    """, (lead_id,)).fetchall()
+
+    new_score = calculate_lead_score(lead, interactions)
 
     db.execute("""
         UPDATE leads
@@ -627,7 +575,14 @@ def quick_action(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
-    new_score = calculate_lead_score(lead)
+    interactions = db.execute("""
+        SELECT *
+        FROM interactions
+        WHERE lead_id = ?
+        ORDER BY created_at DESC
+    """, (lead_id,)).fetchall()
+
+    new_score = calculate_lead_score(lead, interactions)
 
     db.execute("""
         UPDATE leads
