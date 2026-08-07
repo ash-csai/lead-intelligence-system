@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect
-from database.db_connection import get_db
+from database.db_connection import get_db, close_db
 import sqlite3
 from datetime import datetime
 
 app = Flask(__name__)
+app.teardown_appcontext(close_db)
 
 def calculate_lead_score(lead):
 
