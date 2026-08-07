@@ -1,5 +1,5 @@
 -- Institutions table
-CREATE TABLE institutions (
+CREATE TABLE IF NOT EXISTS institutions (
     institution_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     type TEXT CHECK(type IN ('school','coaching_center')),
@@ -11,7 +11,7 @@ CREATE TABLE institutions (
 );
 
 -- Leads table
-CREATE TABLE leads (
+CREATE TABLE IF NOT EXISTS leads (
     lead_id INTEGER PRIMARY KEY AUTOINCREMENT,
     student_name TEXT NOT NULL,
     phone TEXT,
@@ -38,7 +38,7 @@ CREATE TABLE leads (
 );
 
 -- Interactions table
-CREATE TABLE interactions (
+CREATE TABLE IF NOT EXISTS interactions (
     interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     lead_id INTEGER NOT NULL,
     interaction_type TEXT NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE interactions (
 );
 
 -- Users table (future expansion)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
     email TEXT,
