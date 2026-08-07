@@ -1,0 +1,11 @@
+# Python / Flask
+__pycache__/
+*.pyc
+*.db
+.env
+venv/
+.vscode/
+# OS files
+desktop.ini
+.DS_Store
+
