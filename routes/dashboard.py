@@ -37,3 +37,35 @@ def dashboard():
         urgent=urgent,
         inactive=inactive,
     )
+
+
+@dashboard_bp.route('/analytics')
+def analytics():
+    db = get_db()
+
+    city_stats = [dict(row) for row in db.execute("""
+        SELECT city, COUNT(*) as total
+        FROM leads
+        GROUP BY city
+        ORDER BY total DESC
+    """).fetchall()]
+
+    source_stats = [dict(row) for row in db.execute("""
+        SELECT lead_source, COUNT(*) as total
+        FROM leads
+        GROUP BY lead_source
+        ORDER BY total DESC
+    """).fetchall()]
+
+    status_stats = [dict(row) for row in db.execute("""
+        SELECT status, COUNT(*) as total
+        FROM leads
+        GROUP BY status
+    """).fetchall()]
+
+    return render_template(
+        "analytics.html",
+        city_stats=city_stats,
+        source_stats=source_stats,
+        status_stats=status_stats,
+    )
