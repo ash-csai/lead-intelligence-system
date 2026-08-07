@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, abort
 from database.db_connection import get_db, close_db
 import sqlite3
 from datetime import datetime
@@ -348,16 +348,8 @@ def lead_detail(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
-    # Calculate lead score
-    score = calculate_lead_score(lead)
-
-    db.execute("""
-        UPDATE leads
-        SET lead_score = ?
-        WHERE lead_id = ?
-    """, (score, lead_id))
-
-    db.commit()
+    if lead is None:
+        abort(404)
 
     interactions = db.execute("""
         SELECT *
