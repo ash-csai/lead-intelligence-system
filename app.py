@@ -128,6 +128,23 @@ def dashboard():
     """).fetchall()
     urgent = []
 
+    priority_lead_ids = [lead["lead_id"] for lead in priority_leads]
+    last_action_lookup = {}
+    if priority_lead_ids:
+        placeholders = ",".join(["?"] * len(priority_lead_ids))
+        last_action_rows = db.execute(f"""
+            SELECT i.lead_id, i.interaction_type
+            FROM interactions i
+            JOIN (
+                SELECT lead_id, MAX(created_at) AS latest_created
+                FROM interactions
+                WHERE lead_id IN ({placeholders})
+                GROUP BY lead_id
+            ) latest ON i.lead_id = latest.lead_id AND i.created_at = latest.latest_created
+        """, tuple(priority_lead_ids)).fetchall()
+        for row in last_action_rows:
+            last_action_lookup[row["lead_id"]] = row["interaction_type"]
+
     inactive_leads = db.execute("""
         SELECT l.*, MAX(i.created_at) as last_interaction
         FROM leads l
@@ -153,18 +170,7 @@ def dashboard():
 
             lead_dict = dict(lead)
 
-            last_action = db.execute("""
-                SELECT interaction_type
-                FROM interactions
-                WHERE lead_id = ?
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (lead["lead_id"],)).fetchone()
-
-            if last_action:
-                lead_dict["last_action"] = last_action["interaction_type"]
-            else:
-                lead_dict["last_action"] = None
+            lead_dict["last_action"] = last_action_lookup.get(lead["lead_id"])
 
             # 🧠 Reason Builder
             reasons = []
