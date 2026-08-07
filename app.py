@@ -1,56 +1,28 @@
-from flask import Flask, render_template, request, redirect, abort
-from database.db_connection import get_db, close_db
-from modules.scoring_engine import calculate_lead_score, HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
-from modules.analytics_engine import (
-    get_pipeline_counts,
-    get_upcoming_followups,
-    get_lead_buckets,
-    build_priority_suggestions,
-    find_neglected_leads,
-)
-import sqlite3
-from datetime import datetime
+from flask import Flask
+from database.db_connection import close_db
 
-app = Flask(__name__)
-app.teardown_appcontext(close_db)
+# Import blueprints
+from routes.dashboard import dashboard_bp
+from routes.leads import leads_bp
+from routes.interactions import interactions_bp
+from routes.institutions import institutions_bp
 
-def normalize_form_input(field_name, value):
-    if field_name in {"school_id", "coaching_id", "follow_up_date"} and value == "":
-        return None
-    if field_name == "interest_level" and value is not None:
-        return value.lower()
-    return value
 
-@app.route("/")
-def dashboard():
+def create_app():
+    app = Flask(__name__)
+    app.teardown_appcontext(close_db)
 
-    db = get_db()
+    # Register blueprints (keep original URLs)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(leads_bp)
+    app.register_blueprint(interactions_bp)
+    app.register_blueprint(institutions_bp)
 
-    counts = get_pipeline_counts(db)
-    upcoming = get_upcoming_followups(db)
-    hot_leads, warm_leads, cold_leads = get_lead_buckets(db)
-    urgent = build_priority_suggestions(db)
-    inactive = find_neglected_leads(db)
+    return app
 
-    return render_template(
-        "dashboard.html",
-        new=counts["new"],
-        contacted=counts["contacted"],
-        interested=counts["interested"],
-        applied=counts["applied"],
-        admitted=counts["admitted"],
-        lost=counts["lost"],
-        total=counts["total"],
-        upcoming=upcoming,
-        hot_leads=hot_leads,
-        warm_leads=warm_leads,
-        cold_leads=cold_leads,
-        urgent=urgent,
-        inactive=inactive,
-    )
 
-@app.route("/leads/add", methods=["GET","POST"])
-def add_lead():
+if __name__ == "__main__":
+    create_app().run(debug=True)
 
     db = get_db()
 
