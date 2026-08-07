@@ -1,6 +1,13 @@
 from flask import Flask, render_template, request, redirect, abort
 from database.db_connection import get_db, close_db
 from modules.scoring_engine import calculate_lead_score, HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
+from modules.analytics_engine import (
+    get_pipeline_counts,
+    get_upcoming_followups,
+    get_lead_buckets,
+    build_priority_suggestions,
+    find_neglected_leads,
+)
 import sqlite3
 from datetime import datetime
 
@@ -15,180 +22,30 @@ def normalize_form_input(field_name, value):
     return value
 
 @app.route("/")
-def dashboard():
-
     db = get_db()
 
-    new = db.execute("SELECT COUNT(*) FROM leads WHERE status='new'").fetchone()[0]
-    contacted = db.execute("SELECT COUNT(*) FROM leads WHERE status='contacted'").fetchone()[0]
-    interested = db.execute("SELECT COUNT(*) FROM leads WHERE status='interested'").fetchone()[0]
-    applied = db.execute("SELECT COUNT(*) FROM leads WHERE status='applied'").fetchone()[0]
-    admitted = db.execute("SELECT COUNT(*) FROM leads WHERE status='admitted'").fetchone()[0]
-    lost = db.execute("SELECT COUNT(*) FROM leads WHERE status='lost'").fetchone()[0]
-
-    total = db.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
-
-    upcoming = db.execute("""
-        SELECT l.student_name, i.follow_up_date
-        FROM interactions i
-        JOIN leads l ON l.lead_id = i.lead_id
-        WHERE i.follow_up_date IS NOT NULL
-        ORDER BY i.follow_up_date ASC
-        LIMIT 5
-    """).fetchall()
-
-    hot_leads = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_score >= ?
-        ORDER BY lead_score DESC
-    """, (HOT_LEAD_THRESHOLD,)).fetchall()
-
-    warm_leads = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_score >= ? AND lead_score < ?
-        ORDER BY lead_score DESC
-    """, (WARM_LEAD_THRESHOLD, HOT_LEAD_THRESHOLD)).fetchall()
-
-    cold_leads = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_score < ?
-        ORDER BY lead_score DESC
-    """, (WARM_LEAD_THRESHOLD,)).fetchall()
-
-    today = datetime.now().date()
-
-    priority_leads = db.execute("""
-        SELECT l.*, MAX(i.follow_up_date) as next_followup
-        FROM leads l
-        LEFT JOIN interactions i ON l.lead_id = i.lead_id
-        GROUP BY l.lead_id
-        HAVING next_followup IS NOT NULL
-    """).fetchall()
-    urgent = []
-
-    priority_lead_ids = [lead["lead_id"] for lead in priority_leads]
-    last_action_lookup = {}
-    if priority_lead_ids:
-        placeholders = ",".join(["?"] * len(priority_lead_ids))
-        last_action_rows = db.execute(f"""
-            SELECT i.lead_id, i.interaction_type
-            FROM interactions i
-            JOIN (
-                SELECT lead_id, MAX(created_at) AS latest_created
-                FROM interactions
-                WHERE lead_id IN ({placeholders})
-                GROUP BY lead_id
-            ) latest ON i.lead_id = latest.lead_id AND i.created_at = latest.latest_created
-        """, tuple(priority_lead_ids)).fetchall()
-        for row in last_action_rows:
-            last_action_lookup[row["lead_id"]] = row["interaction_type"]
-
-    inactive_leads = db.execute("""
-        SELECT l.*, MAX(i.created_at) as last_interaction
-        FROM leads l
-        LEFT JOIN interactions i ON l.lead_id = i.lead_id
-        GROUP BY l.lead_id
-    """).fetchall()
-
-    for lead in priority_leads:
-        if lead["next_followup"]:
-            followup_date = datetime.strptime(lead["next_followup"], "%Y-%m-%d").date()
-
-            days_diff = (followup_date - today).days
-
-            # 🎯 Priority Logic
-            if days_diff <= 0:
-                urgency_score = 50   # overdue or today
-            elif days_diff <= 2:
-                urgency_score = 30
-            else:
-                urgency_score = 10
-
-            total_priority = urgency_score + (lead["lead_score"] or 0)
-
-            lead_dict = dict(lead)
-
-            lead_dict["last_action"] = last_action_lookup.get(lead["lead_id"])
-
-            # 🧠 Reason Builder
-            reasons = []
-            
-            if days_diff < 0:
-                reasons.append("Overdue follow-up")
-            elif days_diff == 0:
-                reasons.append("Follow-up today")
-
-            if lead["lead_score"] and lead["lead_score"] >= HOT_LEAD_THRESHOLD:
-                reasons.append("High-value lead")
-
-            if lead["lead_score"] and lead["lead_score"] < WARM_LEAD_THRESHOLD:
-                reasons.append("Low engagement")
-
-            lead_dict["reasons"] = ", ".join(reasons)
-
-            urgent.append(lead_dict)
-
-            lead_dict["priority_score"] = total_priority
-            lead_dict["days_diff"] = days_diff
-            lead_dict["reasons"] = ", ".join(reasons)
-
-            # 🤖 Action Suggestion Engine
-
-            suggestion = "Review manually"
-
-            if lead_dict["days_diff"] <= 0:
-                suggestion = "Call immediately"
-
-            elif lead["lead_score"] and lead["lead_score"] >= 70:
-                suggestion = "Push for application"
-
-            elif lead["lead_score"] and lead["lead_score"] >= 40:
-                suggestion = "Follow-up (WhatsApp/Message)"
-
-            elif lead["lead_score"] < 40:
-                suggestion = "Low priority — nurture slowly"
-
-            lead_dict["suggestion"] = suggestion
-
-            
-    # Sort by priority
-    urgent = sorted(urgent, key=lambda x: x["priority_score"], reverse=True)
-
-    inactive = []
-
-    for lead in inactive_leads:
-
-        if lead["last_interaction"]:
-            last_date = datetime.strptime(lead["last_interaction"], "%Y-%m-%d %H:%M:%S")
-            days_idle = (datetime.now() - last_date).days
-
-            if days_idle >= 3:  # 🔥 threshold
-                lead_dict = dict(lead)
-                lead_dict["days_idle"] = days_idle
-                inactive.append(lead_dict)
-
-    #Sort by the worst cases
-    inactive = sorted(inactive, key=lambda x: x["days_idle"], reverse=True)
-
+    counts = get_pipeline_counts(db)
+    upcoming = get_upcoming_followups(db)
+    hot_leads, warm_leads, cold_leads = get_lead_buckets(db)
+    urgent = build_priority_suggestions(db)
+    inactive = find_neglected_leads(db)
 
     return render_template(
         "dashboard.html",
-        new=new,
-        contacted=contacted,
-        interested=interested,
-        applied=applied,
-        admitted=admitted,
-        lost=lost,
-        total=total,
+        new=counts["new"],
+        contacted=counts["contacted"],
+        interested=counts["interested"],
+        applied=counts["applied"],
+        admitted=counts["admitted"],
+        lost=counts["lost"],
+        total=counts["total"],
         upcoming=upcoming,
         hot_leads=hot_leads,
         warm_leads=warm_leads,
         cold_leads=cold_leads,
         urgent=urgent,
-        inactive=inactive
+        inactive=inactive,
+    )
     )
 
 @app.route("/leads/add", methods=["GET","POST"])
