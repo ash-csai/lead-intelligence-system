@@ -65,6 +65,14 @@ def calculate_lead_score(lead):
 
     return score
 
+
+def normalize_form_input(field_name, value):
+    if field_name in {"school_id", "coaching_id", "follow_up_date"} and value == "":
+        return None
+    if field_name == "interest_level" and value is not None:
+        return value.lower()
+    return value
+
 @app.route("/")
 def dashboard():
 
@@ -273,10 +281,10 @@ def add_lead():
         if existing:
             return "Lead with this phone already exists"
         city = request.form["city"]
-        school_id = request.form["school_id"]
-        coaching_id = request.form["coaching_id"]
+        school_id = normalize_form_input("school_id", request.form["school_id"])
+        coaching_id = normalize_form_input("coaching_id", request.form["coaching_id"])
         course_interest = request.form["course_interest"]
-        interest_level = request.form["interest_level"]
+        interest_level = normalize_form_input("interest_level", request.form["interest_level"])
         notes = request.form["notes"]
 
         db.execute("""
@@ -371,7 +379,7 @@ def add_interaction(lead_id):
 
     interaction_type = request.form["interaction_type"]
     notes = request.form["notes"]
-    follow_up_date = request.form["follow_up_date"]
+    follow_up_date = normalize_form_input("follow_up_date", request.form["follow_up_date"])
 
     db.execute("""
         INSERT INTO interactions
@@ -422,7 +430,7 @@ def auto_add_interaction(lead_id):
 
     interaction_type = request.form["interaction_type"]
     notes = request.form["notes"]
-    follow_up_date = request.form["follow_up_date"]
+    follow_up_date = normalize_form_input("follow_up_date", request.form["follow_up_date"])
 
     db.execute("""
         INSERT INTO interactions
@@ -630,7 +638,7 @@ def edit_lead(lead_id):
         phone = request.form["phone"]
         city = request.form["city"]
         course_interest = request.form["course_interest"]
-        interest_level = request.form["interest_level"]
+        interest_level = normalize_form_input("interest_level", request.form["interest_level"])
         notes = request.form["notes"]
 
         db.execute("""
