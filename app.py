@@ -22,6 +22,8 @@ def normalize_form_input(field_name, value):
     return value
 
 @app.route("/")
+def dashboard():
+
     db = get_db()
 
     counts = get_pipeline_counts(db)
@@ -45,7 +47,6 @@ def normalize_form_input(field_name, value):
         cold_leads=cold_leads,
         urgent=urgent,
         inactive=inactive,
-    )
     )
 
 @app.route("/leads/add", methods=["GET","POST"])
