@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS leads (
     coaching_id INTEGER,
     course_interest TEXT,
     lead_source TEXT,
-    interest_level TEXT,
+    interest_level TEXT CHECK(interest_level IN ('high','medium','low')),
     lead_score INTEGER DEFAULT 0,
     status TEXT CHECK(status IN (
         'new',
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS leads (
 CREATE TABLE IF NOT EXISTS interactions (
     interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     lead_id INTEGER NOT NULL,
-    interaction_type TEXT NOT NULL,
+    interaction_type TEXT NOT NULL CHECK(interaction_type IN ('call','visit','application','whatsapp','email')),
     notes TEXT,
     follow_up_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
