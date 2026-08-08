@@ -23,7 +23,7 @@ print('created lead_id=', lead_id)
 
 # verify score after insert via app logic
 from database.db_connection import get_db
-from modules.scoring_engine import recalculate_and_persist_score
+from lead_intelligence.scoring import recalculate_and_persist_score
 
 # use sqlite connection directly for verification
 cur.execute('SELECT lead_score FROM leads WHERE lead_id = ?', (lead_id,))

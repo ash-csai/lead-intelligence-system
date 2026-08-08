@@ -1,5 +1,6 @@
 from datetime import datetime
-from modules.scoring_engine import HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
+from lead_intelligence.scoring import HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
+from lead_intelligence.priority import build_priority_details
 
 
 def get_pipeline_counts(db):
@@ -96,57 +97,11 @@ def build_priority_suggestions(db, today=None):
 
     for lead in priority_leads:
         if lead["next_followup"]:
-            followup_date = datetime.strptime(lead["next_followup"], "%Y-%m-%d").date()
-
-            days_diff = (followup_date - today).days
-
-            # Priority Logic
-            if days_diff <= 0:
-                urgency_score = 50
-            elif days_diff <= 2:
-                urgency_score = 30
-            else:
-                urgency_score = 10
-
-            total_priority = urgency_score + (lead["lead_score"] or 0)
-
-            lead_dict = dict(lead)
-
-            lead_dict["last_action"] = last_action_lookup.get(lead["lead_id"])
-
-            # Reason Builder
-            reasons = []
-            if days_diff < 0:
-                reasons.append("Overdue follow-up")
-            elif days_diff == 0:
-                reasons.append("Follow-up today")
-
-            if lead["lead_score"] and lead["lead_score"] >= HOT_LEAD_THRESHOLD:
-                reasons.append("High-value lead")
-
-            if lead["lead_score"] and lead["lead_score"] < WARM_LEAD_THRESHOLD:
-                reasons.append("Low engagement")
-
-            lead_dict["reasons"] = ", ".join(reasons)
-
-            lead_dict["priority_score"] = total_priority
-            lead_dict["days_diff"] = days_diff
-            lead_dict["reasons"] = ", ".join(reasons)
-
-            # Action Suggestion Engine
-            suggestion = "Review manually"
-
-            if lead_dict["days_diff"] <= 0:
-                suggestion = "Call immediately"
-            elif lead["lead_score"] and lead["lead_score"] >= HOT_LEAD_THRESHOLD:
-                suggestion = "Push for application"
-            elif lead["lead_score"] and lead["lead_score"] >= WARM_LEAD_THRESHOLD:
-                suggestion = "Follow-up (WhatsApp/Message)"
-            elif lead["lead_score"] < WARM_LEAD_THRESHOLD:
-                suggestion = "Low priority — nurture slowly"
-
-            lead_dict["suggestion"] = suggestion
-
+            lead_dict = build_priority_details(
+                lead,
+                last_action=last_action_lookup.get(lead["lead_id"]),
+                today=today,
+            )
             urgent.append(lead_dict)
 
     # Sort by priority

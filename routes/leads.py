@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, abort
 from database.db_connection import get_db
-from modules.scoring_engine import recalculate_and_persist_score
+from lead_intelligence.scoring import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
 
 leads_bp = Blueprint('leads', __name__)

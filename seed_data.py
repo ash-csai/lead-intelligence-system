@@ -1,7 +1,7 @@
 import sqlite3
 import random
 from datetime import datetime, timedelta
-from modules.scoring_engine import recalculate_and_persist_score
+from lead_intelligence.scoring import recalculate_and_persist_score
 
 DB_PATH = "lead_system.db"
 
