@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, abort
 from database.db_connection import get_db
+from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
 
 leads_bp = Blueprint('leads', __name__)
@@ -117,7 +118,7 @@ def add_lead():
         interest_level = normalize_form_input("interest_level", request.form["interest_level"])
         notes = request.form["notes"]
 
-        db.execute("""
+        cursor = db.execute("""
             INSERT INTO leads
             (student_name, phone, city, school_id, coaching_id,
             course_interest, lead_source, interest_level, notes)
@@ -134,6 +135,8 @@ def add_lead():
             notes
         ))
 
+        lead_id = cursor.lastrowid
+        recalculate_and_persist_score(db, lead_id)
         db.commit()
 
         return redirect("/leads")
@@ -179,6 +182,7 @@ def edit_lead(lead_id):
             lead_id
         ))
 
+        recalculate_and_persist_score(db, lead_id)
         db.commit()
 
         return redirect(f"/leads/{lead_id}")

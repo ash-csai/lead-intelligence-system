@@ -1,6 +1,6 @@
 from flask import Blueprint, request, redirect
 from database.db_connection import get_db
-from modules.scoring_engine import calculate_lead_score
+from modules.scoring_engine import calculate_lead_score, recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
 
 interactions_bp = Blueprint('interactions', __name__)
@@ -20,28 +20,7 @@ def add_interaction(lead_id):
         VALUES (?, ?, ?, ?)
     """, (lead_id, interaction_type, notes, follow_up_date))
 
-    # Recalculate score after interaction
-    lead = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_id = ?
-    """, (lead_id,)).fetchone()
-
-    interactions = db.execute("""
-        SELECT *
-        FROM interactions
-        WHERE lead_id = ?
-        ORDER BY created_at DESC
-    """, (lead_id,)).fetchall()
-
-    new_score = calculate_lead_score(lead, interactions)
-
-    db.execute("""
-        UPDATE leads
-        SET lead_score = ?
-        WHERE lead_id = ?
-    """, (new_score, lead_id))
-
+    recalculate_and_persist_score(db, lead_id)
     db.commit()
 
     return redirect(f"/leads/{lead_id}")
@@ -59,6 +38,7 @@ def update_status(lead_id):
         WHERE lead_id = ?
     """, (new_status, lead_id))
 
+    recalculate_and_persist_score(db, lead_id)
     db.commit()
 
     return redirect(f"/leads/{lead_id}")
@@ -86,6 +66,7 @@ def auto_add_interaction(lead_id):
     elif interaction_type == "application":
         db.execute("UPDATE leads SET status='applied' WHERE lead_id=?", (lead_id,))
 
+    recalculate_and_persist_score(db, lead_id)
     db.commit()
 
     return redirect(f"/leads/{lead_id}")
@@ -103,28 +84,7 @@ def quick_action(lead_id):
         VALUES (?, ?, ?)
     """, (lead_id, action_type, "Quick action performed"))
 
-    # Recalculate score
-    lead = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_id = ?
-    """, (lead_id,)).fetchone()
-
-    interactions = db.execute("""
-        SELECT *
-        FROM interactions
-        WHERE lead_id = ?
-        ORDER BY created_at DESC
-    """, (lead_id,)).fetchall()
-
-    new_score = calculate_lead_score(lead, interactions)
-
-    db.execute("""
-        UPDATE leads
-        SET lead_score = ?
-        WHERE lead_id = ?
-    """, (new_score, lead_id))
-
+    recalculate_and_persist_score(db, lead_id)
     db.commit()
 
     return redirect("/")

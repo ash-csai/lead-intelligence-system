@@ -52,3 +52,20 @@ def calculate_lead_score(lead, interactions):
         score += 5
 
     return score
+
+
+def recalculate_and_persist_score(db, lead_id):
+    lead = db.execute(
+        "SELECT * FROM leads WHERE lead_id = ?",
+        (lead_id,),
+    ).fetchone()
+    interactions = db.execute(
+        "SELECT * FROM interactions WHERE lead_id = ? ORDER BY created_at DESC",
+        (lead_id,),
+    ).fetchall()
+    score = calculate_lead_score(lead, interactions)
+    db.execute(
+        "UPDATE leads SET lead_score = ? WHERE lead_id = ?",
+        (score, lead_id),
+    )
+    return score
