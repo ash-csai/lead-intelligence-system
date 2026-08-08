@@ -1,10 +1,12 @@
 import sqlite3
 import random
 from datetime import datetime, timedelta
+from modules.scoring_engine import recalculate_and_persist_score
 
 DB_PATH = "lead_system.db"
 
 conn = sqlite3.connect(DB_PATH)
+conn.row_factory = sqlite3.Row
 cursor = conn.cursor()
 
 names = [
@@ -64,16 +66,7 @@ def seed_leads():
             
             lead_id = cursor.lastrowid
             
-            # Since lead_score is dynamically built by interactions normally, we'll manually set it for data visualization 
-            # to trigger 'hot', 'warm', 'cold' categories beautifully!
-            score = 0
-            if priority == "high": score += random.randint(50, 95)
-            elif priority == "medium": score += random.randint(30, 60)
-            else: score += random.randint(0, 30)
-                
-            cursor.execute("UPDATE leads SET lead_score = ? WHERE lead_id = ?", (score, lead_id))
-            
-            # Let's also create random interactions so "Upcoming Follow-ups" and "Neglected Leads" works
+            # Create random interactions so the seed data exercises scoring and follow-up widgets
             if random.random() > 0.4:  # 60% chance to have interaction
                 for _ in range(random.randint(1, 3)):
                     int_type = random.choice(["call", "email", "whatsapp", "visit"])
@@ -89,6 +82,9 @@ def seed_leads():
                         INSERT INTO interactions (lead_id, interaction_type, notes, follow_up_date, created_at)
                         VALUES (?, ?, ?, ?, ?)
                     ''', (lead_id, int_type, int_notes, follow_up_date, int_created_at))
+
+            # Recalculate each lead's score using the live scoring algorithm.
+            recalculate_and_persist_score(conn, lead_id)
 
         except Exception as e:
             print(f"Error inserting {name}: {e}")
