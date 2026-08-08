@@ -6,26 +6,6 @@ from utils.form_helpers import normalize_form_input
 interactions_bp = Blueprint('interactions', __name__)
 
 
-@interactions_bp.route('/leads/<int:lead_id>/add_interaction', methods=['POST'])
-def add_interaction(lead_id):
-    db = get_db()
-
-    interaction_type = request.form["interaction_type"]
-    notes = request.form["notes"]
-    follow_up_date = normalize_form_input("follow_up_date", request.form["follow_up_date"])
-
-    db.execute("""
-        INSERT INTO interactions
-        (lead_id, interaction_type, notes, follow_up_date)
-        VALUES (?, ?, ?, ?)
-    """, (lead_id, interaction_type, notes, follow_up_date))
-
-    recalculate_and_persist_score(db, lead_id)
-    db.commit()
-
-    return redirect(f"/leads/{lead_id}")
-
-
 @interactions_bp.route('/leads/update_status/<int:lead_id>', methods=['POST'])
 def update_status(lead_id):
     db = get_db()
