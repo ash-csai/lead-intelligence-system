@@ -20,6 +20,7 @@ def get_upcoming_followups(db, limit=5):
         FROM interactions i
         JOIN leads l ON l.lead_id = i.lead_id
         WHERE i.follow_up_date IS NOT NULL
+          AND i.follow_up_date >= DATE('now')
         ORDER BY i.follow_up_date ASC
         LIMIT ?
     """, (limit,)).fetchall()
@@ -55,9 +56,10 @@ def build_priority_suggestions(db, today=None):
         today = datetime.now().date()
 
     priority_leads = db.execute("""
-        SELECT l.*, MAX(i.follow_up_date) as next_followup
+        SELECT l.*, MIN(i.follow_up_date) as next_followup
         FROM leads l
         LEFT JOIN interactions i ON l.lead_id = i.lead_id
+        WHERE i.follow_up_date IS NOT NULL
         GROUP BY l.lead_id
         HAVING next_followup IS NOT NULL
     """).fetchall()
@@ -155,12 +157,15 @@ def find_neglected_leads(db):
     for lead in inactive_leads:
         if lead["last_interaction"]:
             last_date = datetime.strptime(lead["last_interaction"], "%Y-%m-%d %H:%M:%S")
-            days_idle = (datetime.now() - last_date).days
+        else:
+            last_date = datetime.strptime(lead["created_at"], "%Y-%m-%d %H:%M:%S")
 
-            if days_idle >= 3:
-                lead_dict = dict(lead)
-                lead_dict["days_idle"] = days_idle
-                inactive.append(lead_dict)
+        days_idle = (datetime.now() - last_date).days
+
+        if days_idle >= 3:
+            lead_dict = dict(lead)
+            lead_dict["days_idle"] = days_idle
+            inactive.append(lead_dict)
 
     # Sort by the worst cases
     inactive = sorted(inactive, key=lambda x: x["days_idle"], reverse=True)
