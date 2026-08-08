@@ -158,6 +158,9 @@ def edit_lead(lead_id):
         WHERE lead_id = ?
     """, (lead_id,)).fetchone()
 
+    if lead is None:
+        abort(404)
+
     if request.method == "POST":
 
         student_name = request.form["student_name"]

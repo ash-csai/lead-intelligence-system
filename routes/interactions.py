@@ -1,6 +1,7 @@
-from flask import Blueprint, request, redirect
+import sqlite3
+from flask import Blueprint, request, redirect, abort
 from database.db_connection import get_db
-from modules.scoring_engine import calculate_lead_score, recalculate_and_persist_score
+from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
 
 interactions_bp = Blueprint('interactions', __name__)
@@ -12,11 +13,14 @@ def update_status(lead_id):
 
     new_status = request.form["status"]
 
-    db.execute("""
+    cursor = db.execute("""
         UPDATE leads
         SET status = ?
         WHERE lead_id = ?
     """, (new_status, lead_id))
+
+    if cursor.rowcount == 0:
+        abort(404)
 
     recalculate_and_persist_score(db, lead_id)
     db.commit()
@@ -32,11 +36,14 @@ def auto_add_interaction(lead_id):
     notes = request.form["notes"]
     follow_up_date = normalize_form_input("follow_up_date", request.form["follow_up_date"])
 
-    db.execute("""
-        INSERT INTO interactions
-        (lead_id, interaction_type, notes, follow_up_date)
-        VALUES (?, ?, ?, ?)
-    """, (lead_id, interaction_type, notes, follow_up_date))
+    try:
+        db.execute("""
+            INSERT INTO interactions
+            (lead_id, interaction_type, notes, follow_up_date)
+            VALUES (?, ?, ?, ?)
+        """, (lead_id, interaction_type, notes, follow_up_date))
+    except sqlite3.IntegrityError:
+        abort(404)
 
     # Smart Status Suggestion Logic
     if interaction_type == "call":
