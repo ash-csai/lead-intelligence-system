@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS institutions (
 CREATE TABLE IF NOT EXISTS leads (
     lead_id INTEGER PRIMARY KEY AUTOINCREMENT,
     student_name TEXT NOT NULL,
-    phone TEXT,
+    phone TEXT UNIQUE,
     city TEXT,
     school_id INTEGER,
     coaching_id INTEGER,

@@ -170,6 +170,14 @@ def edit_lead(lead_id):
         interest_level = normalize_form_input("interest_level", request.form["interest_level"])
         notes = request.form["notes"]
 
+        existing = db.execute("""
+            SELECT * FROM leads
+            WHERE phone = ? AND lead_id != ?
+        """, (phone, lead_id)).fetchone()
+
+        if existing:
+            return "Lead with this phone already exists"
+
         db.execute("""
             UPDATE leads
             SET student_name = ?, phone = ?, city = ?,
