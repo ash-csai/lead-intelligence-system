@@ -3,13 +3,24 @@ from modules.scoring_engine import HOT_LEAD_THRESHOLD, WARM_LEAD_THRESHOLD
 
 
 def get_pipeline_counts(db):
-    counts = {}
-    counts["new"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='new'").fetchone()[0]
-    counts["contacted"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='contacted'").fetchone()[0]
-    counts["interested"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='interested'").fetchone()[0]
-    counts["applied"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='applied'").fetchone()[0]
-    counts["admitted"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='admitted'").fetchone()[0]
-    counts["lost"] = db.execute("SELECT COUNT(*) FROM leads WHERE status='lost'").fetchone()[0]
+    counts = {
+        "new": 0,
+        "contacted": 0,
+        "interested": 0,
+        "applied": 0,
+        "admitted": 0,
+        "lost": 0,
+    }
+
+    rows = db.execute("""
+        SELECT status, COUNT(*) as total
+        FROM leads
+        GROUP BY status
+    """).fetchall()
+
+    for row in rows:
+        counts[row[0]] = row[1]
+
     counts["total"] = db.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
     return counts
 
