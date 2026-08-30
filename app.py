@@ -1,5 +1,5 @@
 from flask import Flask
-from database.db_connection import close_db
+from database.db_connection import configure_db, close_db
 
 # Import blueprints
 from routes.dashboard import dashboard_bp
@@ -10,6 +10,10 @@ from routes.institutions import institutions_bp
 
 def create_app():
     app = Flask(__name__)
+    
+    # Configure SQLAlchemy
+    configure_db(app)
+    
     app.teardown_appcontext(close_db)
 
     # Register blueprints (keep original URLs)

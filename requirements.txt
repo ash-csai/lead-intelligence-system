@@ -2,3 +2,6 @@ flask
 pandas
 pytest
 pytest-flask
+sqlalchemy
+flask-sqlalchemy
+alembic

@@ -1,18 +1,32 @@
-import sqlite3
-from flask import g
+"""Database connection and configuration using SQLAlchemy."""
 
-DB_NAME = "lead_system.db"
+import os
+from flask_sqlalchemy import SQLAlchemy
+from database.models import db
+
+DB_NAME = os.environ.get("DATABASE_URL", "sqlite:///lead_system.db")
+
+
+def configure_db(app):
+    """Configure SQLAlchemy for the Flask app."""
+    app.config["SQLALCHEMY_DATABASE_URI"] = DB_NAME
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    db.init_app(app)
+
 
 def get_db():
-    if "db" not in g:
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        g.db = conn
-    return g.db
+    """Get the SQLAlchemy db instance (for compatibility with existing code)."""
+    return db
 
 
 def close_db(e=None):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+    """Close database session on app context teardown."""
+    # SQLAlchemy handles this automatically via Flask integration
+    pass
+
+
+def init_db(app):
+    """Initialize database tables."""
+    with app.app_context():
+        db.create_all()
+
