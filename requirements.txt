@@ -1,2 +1,4 @@
 flask
 pandas
+pytest
+pytest-flask
