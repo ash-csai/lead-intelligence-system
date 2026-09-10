@@ -19,18 +19,16 @@ def temp_db(app):
 @pytest.fixture
 def app(tmp_path, monkeypatch):
     """Create Flask app with temporary database for testing."""
-    # Create temporary database
     db_path = tmp_path / "test.db"
     db_path_str = str(db_path)
     db_url = f"sqlite:///{db_path_str}"
 
-    # Patch the DB_NAME and DATABASE_URL to use test database
+    # Patch the environment and then build the app from the explicit TestingConfig.
     monkeypatch.setenv("DATABASE_URL", db_url)
-    import database.db_connection
-    original_db_name = database.db_connection.DB_NAME
-    database.db_connection.DB_NAME = db_url
+    monkeypatch.setenv("TEST_DATABASE_URL", db_url)
+    monkeypatch.setenv("FLASK_ENV", "testing")
 
-    app = create_app()
+    app = create_app(config_object=None, config_name="testing")
     app.config["TESTING"] = True
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
@@ -50,8 +48,6 @@ def app(tmp_path, monkeypatch):
         db.session.remove()
         db.engine.dispose()
 
-    # Restore original DB_NAME
-    database.db_connection.DB_NAME = original_db_name
     if db_path.exists():
         try:
             db_path.unlink()

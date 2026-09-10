@@ -75,6 +75,20 @@ class TestLeadRoutes:
             assert response.status_code == 200
 
 
+class TestConfigFactory:
+    """Verify that configuration objects are accepted by the app factory cleanly."""
+
+    def test_create_app_accepts_testing_config_object(self):
+        """The app factory should accept a config class and apply the testing envelope."""
+        from app import create_app
+        from config import TestingConfig
+
+        app = create_app(config_object=TestingConfig)
+        assert app.config["TESTING"] is True
+        assert app.config["DEBUG"] is False
+        assert app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///")
+
+
 class TestConstraintRegressionChecks:
     """Verify that the database rejects invalid data and FK violations at the ORM layer."""
 
