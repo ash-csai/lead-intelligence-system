@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template
 from database.db_connection import get_db
+from database.models import Lead
+from sqlalchemy import func
 from modules.analytics_engine import (
     get_pipeline_counts,
     get_upcoming_followups,
@@ -43,25 +45,37 @@ def dashboard():
 def analytics():
     db = get_db()
 
-    city_stats = [dict(row) for row in db.execute("""
-        SELECT city, COUNT(*) as total
-        FROM leads
-        GROUP BY city
-        ORDER BY total DESC
-    """).fetchall()]
+    city_stats = [
+        {"city": city, "total": total}
+        for city, total in db.session.query(
+            Lead.city,
+            func.count(Lead.lead_id)
+        )
+        .group_by(Lead.city)
+        .order_by(func.count(Lead.lead_id).desc())
+        .all()
+    ]
 
-    source_stats = [dict(row) for row in db.execute("""
-        SELECT lead_source, COUNT(*) as total
-        FROM leads
-        GROUP BY lead_source
-        ORDER BY total DESC
-    """).fetchall()]
+    source_stats = [
+        {"lead_source": lead_source, "total": total}
+        for lead_source, total in db.session.query(
+            Lead.lead_source,
+            func.count(Lead.lead_id)
+        )
+        .group_by(Lead.lead_source)
+        .order_by(func.count(Lead.lead_id).desc())
+        .all()
+    ]
 
-    status_stats = [dict(row) for row in db.execute("""
-        SELECT status, COUNT(*) as total
-        FROM leads
-        GROUP BY status
-    """).fetchall()]
+    status_stats = [
+        {"status": status, "total": total}
+        for status, total in db.session.query(
+            Lead.status,
+            func.count(Lead.lead_id)
+        )
+        .group_by(Lead.status)
+        .all()
+    ]
 
     return render_template(
         "analytics.html",

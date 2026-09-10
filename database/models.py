@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import CheckConstraint
 
 db = SQLAlchemy()
 
@@ -10,13 +11,15 @@ class Institution(db.Model):
     """Institutions table — schools and coaching centers."""
 
     __tablename__ = "institutions"
+    __table_args__ = (
+        CheckConstraint("type IN ('school','coaching_center')"),
+    )
 
     institution_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
     type = db.Column(
         db.String,
         nullable=True,
-        # CHECK constraint: type IN ('school','coaching_center')
     )
     city = db.Column(db.String, nullable=True)
     contact_person = db.Column(db.String, nullable=True)
@@ -46,6 +49,10 @@ class Lead(db.Model):
     """Leads table — student/prospect records."""
 
     __tablename__ = "leads"
+    __table_args__ = (
+        CheckConstraint("interest_level IN ('high','medium','low')"),
+        CheckConstraint("status IN ('new','contacted','interested','applied','admitted','lost')"),
+    )
 
     lead_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     student_name = db.Column(db.String, nullable=False)
@@ -66,14 +73,12 @@ class Lead(db.Model):
     interest_level = db.Column(
         db.String,
         nullable=True,
-        # CHECK constraint: interest_level IN ('high','medium','low')
     )
     lead_score = db.Column(db.Integer, default=0, nullable=False)
     status = db.Column(
         db.String,
         default="new",
         nullable=False,
-        # CHECK constraint: status IN ('new','contacted','interested','applied','admitted','lost')
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     notes = db.Column(db.String, nullable=True)
@@ -94,6 +99,9 @@ class Interaction(db.Model):
     """Interactions table — calls, visits, applications, etc."""
 
     __tablename__ = "interactions"
+    __table_args__ = (
+        CheckConstraint("interaction_type IN ('call','visit','application','whatsapp','email')"),
+    )
 
     interaction_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     lead_id = db.Column(
@@ -104,7 +112,6 @@ class Interaction(db.Model):
     interaction_type = db.Column(
         db.String,
         nullable=False,
-        # CHECK constraint: interaction_type IN ('call','visit','application','whatsapp','email')
     )
     notes = db.Column(db.String, nullable=True)
     follow_up_date = db.Column(db.Date, nullable=True)

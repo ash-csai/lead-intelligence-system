@@ -1,73 +1,63 @@
+"""Leads routes using SQLAlchemy ORM."""
+
 from flask import Blueprint, render_template, request, redirect, abort
 from database.db_connection import get_db
+from database.models import Lead, Institution, Interaction
 from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
+from sqlalchemy import or_
+from datetime import date
 
 leads_bp = Blueprint('leads', __name__)
 
 
 @leads_bp.route('/leads')
 def lead_list():
+    """List all leads with optional filtering by query, city, status, course."""
     db = get_db()
-
+    
     query = request.args.get("q")
     city = request.args.get("city")
     status = request.args.get("status")
     course = request.args.get("course")
-
-    filters = []
-    params = []
-
+    
+    # Start with base query
+    leads_query = db.session.query(Lead).order_by(Lead.created_at.desc())
+    
+    # Apply filters
     if query:
-        filters.append("(student_name LIKE ? OR phone LIKE ?)")
-        params.extend((f"%{query}%", f"%{query}%"))
+        search_term = f"%{query}%"
+        leads_query = leads_query.filter(
+            or_(
+                Lead.student_name.ilike(search_term),
+                Lead.phone.ilike(search_term)
+            )
+        )
     if city:
-        filters.append("city = ?")
-        params.append(city)
+        leads_query = leads_query.filter(Lead.city == city)
     if status:
-        filters.append("status = ?")
-        params.append(status)
+        leads_query = leads_query.filter(Lead.status == status)
     if course:
-        filters.append("course_interest = ?")
-        params.append(course)
-
-    if filters:
-        where_clause = " WHERE " + " AND ".join(filters)
-        leads = db.execute(f"""
-            SELECT *
-            FROM leads{where_clause}
-            ORDER BY created_at DESC
-        """, params).fetchall()
-    else:
-        leads = db.execute("""
-            SELECT *
-            FROM leads
-            ORDER BY created_at DESC
-        """).fetchall()
-
+        leads_query = leads_query.filter(Lead.course_interest == course)
+    
+    leads = leads_query.all()
+    
     return render_template("leads.html", leads=leads)
 
 
 @leads_bp.route('/leads/<int:lead_id>')
 def lead_detail(lead_id):
+    """Show details for a specific lead and its interactions."""
     db = get_db()
-
-    lead = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_id = ?
-    """, (lead_id,)).fetchone()
-
+    
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
+    
     if lead is None:
         abort(404)
-
-    interactions = db.execute("""
-        SELECT *
-        FROM interactions
-        WHERE lead_id = ?
-        ORDER BY created_at DESC
-    """, (lead_id,)).fetchall()
-
+    
+    # Interactions are eager-loaded via the relationship
+    interactions = lead.interactions
+    
     return render_template(
         "lead_detail.html",
         lead=lead,
@@ -75,72 +65,70 @@ def lead_detail(lead_id):
     )
 
 
-@leads_bp.route('/leads/add', methods=['GET','POST'])
+@leads_bp.route('/leads/add', methods=['GET', 'POST'])
 def add_lead():
+    """Add a new lead."""
     db = get_db()
-
-    schools = db.execute("""
-        SELECT institution_id, name
-        FROM institutions
-        WHERE type='school'
-    """).fetchall()
-
-    coachings = db.execute("""
-        SELECT institution_id, name
-        FROM institutions
-        WHERE type='coaching_center'
-    """).fetchall()
-
+    
+    # Get schools and coaching centers for the form
+    schools = db.session.query(Institution).filter(
+        Institution.type == 'school'
+    ).all()
+    
+    coachings = db.session.query(Institution).filter(
+        Institution.type == 'coaching_center'
+    ).all()
+    
     if request.method == "POST":
-
-        student_name = request.form["student_name"]
-        phone = request.form["phone"]
-        # ✅ Validation
+        student_name = request.form.get("student_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        
+        # Validation
         if not student_name:
             return "Student name is required"
-        
         if not phone:
             return "Phone number is required"
         
-        # ✅ Duplicate check
-        existing = db.execute("""
-            SELECT * FROM leads
-            WHERE phone = ?
-        """, (phone,)).fetchone()
-        
+        # Check for duplicate phone
+        existing = db.session.query(Lead).filter(Lead.phone == phone).first()
         if existing:
             return "Lead with this phone already exists"
-        city = request.form["city"]
-        school_id = normalize_form_input("school_id", request.form["school_id"])
-        coaching_id = normalize_form_input("coaching_id", request.form["coaching_id"])
-        course_interest = request.form["course_interest"]
-        lead_source = request.form["lead_source"]
-        interest_level = normalize_form_input("interest_level", request.form["interest_level"])
-        notes = request.form["notes"]
-
-        cursor = db.execute("""
-            INSERT INTO leads
-            (student_name, phone, city, school_id, coaching_id,
-            course_interest, lead_source, interest_level, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            student_name,
-            phone,
-            city,
-            school_id,
-            coaching_id,
-            course_interest,
-            lead_source,
-            interest_level,
-            notes
-        ))
-
-        lead_id = cursor.lastrowid
+        
+        # Get form data
+        city = request.form.get("city", "").strip()
+        school_id = normalize_form_input("school_id", request.form.get("school_id", ""))
+        coaching_id = normalize_form_input("coaching_id", request.form.get("coaching_id", ""))
+        course_interest = request.form.get("course_interest", "").strip()
+        lead_source = request.form.get("lead_source", "").strip()
+        interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
+        notes = request.form.get("notes", "").strip()
+        
+        # Create new lead
+        new_lead = Lead(
+            student_name=student_name,
+            phone=phone,
+            city=city,
+            school_id=school_id,
+            coaching_id=coaching_id,
+            course_interest=course_interest,
+            lead_source=lead_source,
+            interest_level=interest_level,
+            notes=notes,
+            lead_score=0,
+            status="new"
+        )
+        
+        db.session.add(new_lead)
+        db.session.flush()  # Get the lead_id without committing
+        
+        lead_id = new_lead.lead_id
+        
+        # Recalculate score
         recalculate_and_persist_score(db, lead_id)
-        db.commit()
-
+        db.session.commit()
+        
         return redirect("/leads")
-
+    
     return render_template(
         "add_lead.html",
         schools=schools,
@@ -150,84 +138,91 @@ def add_lead():
 
 @leads_bp.route('/leads/edit/<int:lead_id>', methods=['GET', 'POST'])
 def edit_lead(lead_id):
+    """Edit an existing lead."""
     db = get_db()
-
-    lead = db.execute("""
-        SELECT *
-        FROM leads
-        WHERE lead_id = ?
-    """, (lead_id,)).fetchone()
-
+    
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
+    
     if lead is None:
         abort(404)
-
+    
     if request.method == "POST":
-
-        student_name = request.form["student_name"]
-        phone = request.form["phone"]
-        city = request.form["city"]
-        course_interest = request.form["course_interest"]
-        interest_level = normalize_form_input("interest_level", request.form["interest_level"])
-        notes = request.form["notes"]
-
-        existing = db.execute("""
-            SELECT * FROM leads
-            WHERE phone = ? AND lead_id != ?
-        """, (phone, lead_id)).fetchone()
-
+        student_name = request.form.get("student_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        city = request.form.get("city", "").strip()
+        course_interest = request.form.get("course_interest", "").strip()
+        interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
+        notes = request.form.get("notes", "").strip()
+        
+        # Check for duplicate phone (excluding current lead)
+        existing = db.session.query(Lead).filter(
+            Lead.phone == phone,
+            Lead.lead_id != lead_id
+        ).first()
+        
         if existing:
             return "Lead with this phone already exists"
-
-        db.execute("""
-            UPDATE leads
-            SET student_name = ?, phone = ?, city = ?,
-                course_interest = ?, interest_level = ?, notes = ?
-            WHERE lead_id = ?
-        """, (
-            student_name,
-            phone,
-            city,
-            course_interest,
-            interest_level,
-            notes,
-            lead_id
-        ))
-
+        
+        # Update lead
+        lead.student_name = student_name
+        lead.phone = phone
+        lead.city = city
+        lead.course_interest = course_interest
+        lead.interest_level = interest_level
+        lead.notes = notes
+        
+        # Recalculate score (might change if interest_level changed)
         recalculate_and_persist_score(db, lead_id)
-        db.commit()
-
+        db.session.commit()
+        
         return redirect(f"/leads/{lead_id}")
-
+    
     return render_template("edit_lead.html", lead=lead)
 
 
 @leads_bp.route('/followups')
 def followups():
     db = get_db()
+    today_dt = date.today()
 
-    today = db.execute("""
-        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
-        FROM interactions i
-        JOIN leads l ON i.lead_id = l.lead_id
-        WHERE i.follow_up_date = DATE('now')
-        ORDER BY i.follow_up_date
-    """).fetchall()
+    today = (
+        db.session.query(
+            Lead.student_name,
+            Lead.phone,
+            Interaction.notes,
+            Interaction.follow_up_date
+        )
+        .join(Lead, Interaction.lead_id == Lead.lead_id)
+        .filter(Interaction.follow_up_date == today_dt)
+        .order_by(Interaction.follow_up_date)
+        .all()
+    )
 
-    overdue = db.execute("""
-        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
-        FROM interactions i
-        JOIN leads l ON i.lead_id = l.lead_id
-        WHERE i.follow_up_date < DATE('now')
-        ORDER BY i.follow_up_date
-    """).fetchall()
+    overdue = (
+        db.session.query(
+            Lead.student_name,
+            Lead.phone,
+            Interaction.notes,
+            Interaction.follow_up_date
+        )
+        .join(Lead, Interaction.lead_id == Lead.lead_id)
+        .filter(Interaction.follow_up_date < today_dt)
+        .order_by(Interaction.follow_up_date)
+        .all()
+    )
 
-    upcoming = db.execute("""
-        SELECT l.student_name, l.phone, i.notes, i.follow_up_date
-        FROM interactions i
-        JOIN leads l ON i.lead_id = l.lead_id
-        WHERE i.follow_up_date > DATE('now')
-        ORDER BY i.follow_up_date
-    """).fetchall()
+    upcoming = (
+        db.session.query(
+            Lead.student_name,
+            Lead.phone,
+            Interaction.notes,
+            Interaction.follow_up_date
+        )
+        .join(Lead, Interaction.lead_id == Lead.lead_id)
+        .filter(Interaction.follow_up_date > today_dt)
+        .order_by(Interaction.follow_up_date)
+        .all()
+    )
 
     return render_template(
         "followups.html",

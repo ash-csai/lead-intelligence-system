@@ -1,6 +1,6 @@
 """Pytest configuration and fixtures for Lead Intelligence System tests."""
 
-import sqlite3
+import os
 import tempfile
 from pathlib import Path
 
@@ -9,24 +9,11 @@ from app import create_app
 
 
 @pytest.fixture
-def temp_db():
-    """Create a temporary SQLite database for testing."""
-    fd, db_path = tempfile.mkstemp(suffix=".db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    
-    # Initialize schema
-    schema_sql = Path(__file__).parent.parent / "database" / "schema.sql"
-    with open(schema_sql) as f:
-        conn.executescript(f.read())
-    
-    conn.commit()
-    
-    yield conn
-    
-    conn.close()
-    Path(db_path).unlink()
+def temp_db(app):
+    """Provide a SQLAlchemy database object (with sessions) inside application context."""
+    from database.db_connection import get_db
+    with app.app_context():
+        yield get_db()
 
 
 @pytest.fixture
@@ -35,32 +22,41 @@ def app(tmp_path, monkeypatch):
     # Create temporary database
     db_path = tmp_path / "test.db"
     db_path_str = str(db_path)
+    db_url = f"sqlite:///{db_path_str}"
     
-    # Initialize database schema
-    conn = sqlite3.connect(db_path_str)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    
-    schema_sql = Path(__file__).parent.parent / "database" / "schema.sql"
-    with open(schema_sql) as f:
-        conn.executescript(f.read())
-    
-    conn.commit()
-    conn.close()
-    
-    # Patch the DB_NAME to use test database
-    monkeypatch.setenv("FLASK_TESTING", "true")
+    # Patch the DB_NAME and DATABASE_URL to use test database
+    monkeypatch.setenv("DATABASE_URL", db_url)
     import database.db_connection
     original_db_name = database.db_connection.DB_NAME
-    database.db_connection.DB_NAME = db_path_str
+    database.db_connection.DB_NAME = db_url
     
     app = create_app()
     app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
     
+    # Run Alembic migrations programmatically
+    from alembic.config import Config
+    from alembic import command
+    with app.app_context():
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+        command.upgrade(alembic_cfg, "head")
+        
     yield app
     
+    # Clean up and close engine connections (crucial for SQLite on Windows)
+    with app.app_context():
+        from database.models import db
+        db.session.remove()
+        db.engine.dispose()
+        
     # Restore original DB_NAME
     database.db_connection.DB_NAME = original_db_name
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except OSError:
+            pass
 
 
 @pytest.fixture
