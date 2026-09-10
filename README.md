@@ -87,6 +87,36 @@ The project has been intentionally structured so it can grow into a larger ERP o
 
 The repository still supplies a SQLite fallback only as a convenient local development/test default and should not be the primary production database in this branch.
 
+## Local development with Docker Compose
+
+The repository includes a `Dockerfile` and a `docker-compose.yml` that stand up the Flask application and a PostgreSQL 17 service together.
+
+```bash
+# from the repository root
+# build and start the app plus PostgreSQL in one command
+docker-compose up --build
+```
+
+The service uses the compose-managed PostgreSQL database at:
+`postgresql+psycopg://postgres:postgres@db:5432/lead_intelligence`
+
+The `web` service runs the Alembic migration automatically as part of the command chain:
+`python -m alembic upgrade head && python app.py`
+
+That makes a fresh `docker-compose up` produce a migrated, ready-to-use Postgres-backed service without a separate manual migration step.
+
+## Testing against the compose-managed Postgres database
+
+To run the pytest suite from the host machine while the compose services are running, point the repository test environment to the compose service:
+
+```bash
+export DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/lead_intelligence
+export TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/lead_intelligence_test
+python -m pytest -q
+```
+
+The same command can be run from inside a container if you prefer the repository-level test runner to live inside the web service rather than on the host. For the existing SQLite-backed tests in this repository, the default `TEST_DATABASE_URL=sqlite:///:memory:` stays valid as a fallback, but the Postgres path above is the path that exercises the production database contract.
+
 ---
 
 # Project Structure

@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lead_intelligence
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    depends_on:
+      - db
+    environment:
+      FLASK_ENV: production
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/lead_intelligence
+      SECRET_KEY: change-me-in-production
+    ports:
+      - "5000:5000"
+    command: sh -c "python -m alembic upgrade head && python app.py"
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:

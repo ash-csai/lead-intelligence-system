@@ -93,6 +93,8 @@ def create_app(config_object=None, config_name=None):
     return app
 
 
+app = create_app(config_name=os.getenv("FLASK_ENV", "production"))
+
+
 if __name__ == "__main__":
-    app = create_app(config_name=os.getenv("FLASK_ENV", "production"))
-    app.run(debug=app.config.get("DEBUG", False))
+    app.run(debug=app.config.get("DEBUG", False), host="0.0.0.0")
