@@ -1,10 +1,11 @@
 """Institutions routes using SQLAlchemy ORM."""
 
-from flask import Blueprint, render_template, request, redirect
+from flask import Blueprint, render_template, request, redirect, abort
 from flask_login import login_required, current_user
 from database.db_connection import get_db
 from database.models import Institution, Lead
 from sqlalchemy import func
+from utils.permissions import require_admin, ADMIN, MANAGER, COUNSELLOR
 
 institutions_bp = Blueprint('institutions', __name__)
 
@@ -16,10 +17,7 @@ def institution_analytics():
     organization_id = current_user.organization_id
 
     school_stats = (
-        db.session.query(
-            Institution.name,
-            func.count(Lead.lead_id).label("total_leads")
-        )
+        db.session.query(Institution.name, func.count(Lead.lead_id).label("total_leads"))
         .outerjoin(Lead, Lead.school_id == Institution.institution_id)
         .filter(Institution.type == 'school', Institution.organization_id == organization_id)
         .group_by(Institution.institution_id)
@@ -28,10 +26,7 @@ def institution_analytics():
     )
 
     coaching_stats = (
-        db.session.query(
-            Institution.name,
-            func.count(Lead.lead_id).label("total_leads")
-        )
+        db.session.query(Institution.name, func.count(Lead.lead_id).label("total_leads"))
         .outerjoin(Lead, Lead.coaching_id == Institution.institution_id)
         .filter(Institution.type == 'coaching_center', Institution.organization_id == organization_id)
         .group_by(Institution.institution_id)
@@ -39,11 +34,7 @@ def institution_analytics():
         .all()
     )
 
-    return render_template(
-        "institution_analytics.html",
-        school_stats=school_stats,
-        coaching_stats=coaching_stats
-    )
+    return render_template("institution_analytics.html", school_stats=school_stats, coaching_stats=coaching_stats)
 
 
 @institutions_bp.route('/institutions')
@@ -59,10 +50,7 @@ def institutions():
         .all()
     )
 
-    return render_template(
-        "institutions.html",
-        institutions=insts
-    )
+    return render_template("institutions.html", institutions=insts)
 
 
 @institutions_bp.route('/institutions/add', methods=['GET', 'POST'])
@@ -70,6 +58,9 @@ def institutions():
 def add_institution():
     db = get_db()
     organization_id = current_user.organization_id
+
+    if current_user.role != ADMIN:
+        abort(403)
 
     if request.method == "POST":
         name = request.form.get("name")

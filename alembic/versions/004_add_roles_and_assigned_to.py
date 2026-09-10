@@ -1,0 +1,185 @@
+"""Add role check, assigned_to foreign key, and consistent user/lead authorization fields.
+
+Revision ID: 004_add_roles_and_assigned_to
+Revises: 003_add_user_password_hash
+Create Date: 2026-09-10
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+
+revision = "004_add_roles_and_assigned_to"
+down_revision = "003_add_user_password_hash"
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    """Add a checked role enum on users and an assigned_to user FK on leads."""
+    bind = op.get_bind()
+
+    # The baseline users table already carries role in this repository's schema.
+    # Rebuild the users table through a checked `users_new` table without
+    # re-running an `ALTER TABLE users ADD COLUMN role` side-effect.
+    bind.execute(sa.text("PRAGMA foreign_keys=OFF"))
+    bind.execute(sa.text("CREATE TABLE IF NOT EXISTS users_new (user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name VARCHAR, email VARCHAR, role VARCHAR, password_hash VARCHAR(255), created_at DATETIME NOT NULL, organization_id INTEGER NOT NULL, CONSTRAINT fk_users_organization FOREIGN KEY(organization_id) REFERENCES organizations(organization_id), CHECK (role IN ('Admin','Manager','Counsellor')) )"))
+
+    # Copy users into new table.
+    bind.execute(sa.text("""
+        INSERT INTO users_new (user_id, name, email, role, password_hash, created_at, organization_id)
+        SELECT user_id, name, email, COALESCE(role, 'Admin'), password_hash, created_at, organization_id
+        FROM users
+    """))
+
+    # Drop old and rename new.
+    bind.execute(sa.text("DROP TABLE users"))
+    bind.execute(sa.text("ALTER TABLE users_new RENAME TO users"))
+
+    # Table-level role constraints need the table rebuild to preserve the user and org constraints.
+    bind.execute(sa.text("PRAGMA foreign_keys=ON"))
+
+    # Leads assigned_to user foreign key.
+    # Use a safety rebuild for the leads table because SQLite cannot add FK safely in place.
+    bind.execute(sa.text("ALTER TABLE leads RENAME TO leads_old"))
+    bind.execute(sa.text("""
+        CREATE TABLE leads (
+            lead_id INTEGER NOT NULL,
+            student_name VARCHAR NOT NULL,
+            phone VARCHAR,
+            city VARCHAR,
+            school_id INTEGER,
+            coaching_id INTEGER,
+            course_interest VARCHAR,
+            lead_source VARCHAR,
+            interest_level VARCHAR,
+            lead_score INTEGER DEFAULT '0' NOT NULL,
+            status VARCHAR DEFAULT 'new' NOT NULL,
+            created_at DATETIME NOT NULL,
+            notes VARCHAR,
+            organization_id INTEGER NOT NULL,
+            assigned_to INTEGER,
+            PRIMARY KEY (lead_id),
+            CONSTRAINT uq_phone UNIQUE (phone),
+            CONSTRAINT fk_leads_organization FOREIGN KEY(organization_id) REFERENCES organizations (organization_id),
+            CONSTRAINT fk_leads_assigned_to FOREIGN KEY(assigned_to) REFERENCES users (user_id),
+            FOREIGN KEY(school_id) REFERENCES institutions (institution_id),
+            FOREIGN KEY(coaching_id) REFERENCES institutions (institution_id),
+            CHECK (interest_level IN ('high','medium','low')),
+            CHECK (status IN ('new','contacted','interested','applied','admitted','lost')),
+            UNIQUE (phone)
+        )
+    """))
+
+    bind.execute(sa.text("""
+        INSERT INTO leads (
+            lead_id, student_name, phone, city, school_id, coaching_id,
+            course_interest, lead_source, interest_level, lead_score,
+            status, created_at, notes, organization_id, assigned_to
+        )
+        SELECT
+            lead_id, student_name, phone, city, school_id, coaching_id,
+            course_interest, lead_source, interest_level, lead_score,
+            status, created_at, notes, organization_id, NULL
+        FROM leads_old
+    """))
+
+    bind.execute(sa.text("DROP TABLE leads_old"))
+
+    # Rebuild interactions so its lead_id FK points at the new leads table and
+    # not at a stale leads_old table name that SQLite mutates while the lead
+    # table rename/drop sequence executes.
+    bind.execute(sa.text("ALTER TABLE interactions RENAME TO interactions_old"))
+    bind.execute(sa.text("""
+        CREATE TABLE interactions (
+            interaction_id INTEGER NOT NULL,
+            lead_id INTEGER NOT NULL,
+            interaction_type VARCHAR NOT NULL,
+            notes VARCHAR,
+            follow_up_date DATE,
+            created_at DATETIME NOT NULL,
+            organization_id INTEGER NOT NULL,
+            PRIMARY KEY (interaction_id),
+            CONSTRAINT fk_interactions_organization FOREIGN KEY(organization_id) REFERENCES organizations (organization_id),
+            FOREIGN KEY(lead_id) REFERENCES leads (lead_id),
+            CHECK (interaction_type IN ('call','visit','application','whatsapp','email'))
+        )
+    """))
+    bind.execute(sa.text("""
+        INSERT INTO interactions (
+            interaction_id, lead_id, interaction_type, notes,
+            follow_up_date, created_at, organization_id
+        )
+        SELECT
+            interaction_id, lead_id, interaction_type, notes,
+            follow_up_date, created_at, organization_id
+        FROM interactions_old
+    """))
+    bind.execute(sa.text("DROP TABLE interactions_old"))
+
+
+def downgrade():
+    """Remove the roles and assigned owner field from the schema safely."""
+    bind = op.get_bind()
+
+    # Restore leads without the assigned_to ownership field.
+    bind.execute(sa.text("ALTER TABLE leads RENAME TO leads_old"))
+    bind.execute(sa.text("""
+        CREATE TABLE leads (
+            lead_id INTEGER NOT NULL,
+            student_name VARCHAR NOT NULL,
+            phone VARCHAR,
+            city VARCHAR,
+            school_id INTEGER,
+            coaching_id INTEGER,
+            course_interest VARCHAR,
+            lead_source VARCHAR,
+            interest_level VARCHAR,
+            lead_score INTEGER DEFAULT '0' NOT NULL,
+            status VARCHAR DEFAULT 'new' NOT NULL,
+            created_at DATETIME NOT NULL,
+            notes VARCHAR,
+            organization_id INTEGER NOT NULL,
+            PRIMARY KEY (lead_id),
+            CONSTRAINT uq_phone UNIQUE (phone),
+            CONSTRAINT fk_leads_organization FOREIGN KEY(organization_id) REFERENCES organizations (organization_id),
+            FOREIGN KEY(school_id) REFERENCES institutions (institution_id),
+            FOREIGN KEY(coaching_id) REFERENCES institutions (institution_id),
+            CHECK (interest_level IN ('high','medium','low')),
+            CHECK (status IN ('new','contacted','interested','applied','admitted','lost')),
+            UNIQUE (phone)
+        )
+    """))
+    bind.execute(sa.text("""
+        INSERT INTO leads (
+            lead_id, student_name, phone, city, school_id, coaching_id,
+            course_interest, lead_source, interest_level, lead_score,
+            status, created_at, notes, organization_id
+        )
+        SELECT
+            lead_id, student_name, phone, city, school_id, coaching_id,
+            course_interest, lead_source, interest_level, lead_score,
+            status, created_at, notes, organization_id
+        FROM leads_old
+    """))
+    bind.execute(sa.text("DROP TABLE leads_old"))
+
+    # Restore users without the checked role enum. Keep password_hash present.
+    bind.execute(sa.text("ALTER TABLE users RENAME TO users_old"))
+    bind.execute(sa.text("""
+        CREATE TABLE users (
+            user_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR,
+            email VARCHAR,
+            password_hash VARCHAR(255),
+            created_at DATETIME NOT NULL,
+            organization_id INTEGER NOT NULL,
+            CONSTRAINT fk_users_organization FOREIGN KEY(organization_id) REFERENCES organizations(organization_id)
+        )
+    """))
+    bind.execute(sa.text("""
+        INSERT INTO users (user_id, name, email, password_hash, created_at, organization_id)
+        SELECT user_id, name, email, password_hash, created_at, organization_id
+        FROM users_old
+    """))
+    bind.execute(sa.text("DROP TABLE users_old"))

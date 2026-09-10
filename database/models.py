@@ -103,6 +103,11 @@ class Lead(db.Model):
         default="new",
         nullable=False,
     )
+    assigned_to = db.Column(
+        db.Integer,
+        db.ForeignKey("users.user_id"),
+        nullable=True,
+    )
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     notes = db.Column(db.String, nullable=True)
 
@@ -151,7 +156,7 @@ class Interaction(db.Model):
 
 
 class User(UserMixin, db.Model):
-    """Users table — logged-in account records."""
+    """Users table — logged-in account records with a role enum."""
 
     __tablename__ = "users"
 
@@ -164,7 +169,7 @@ class User(UserMixin, db.Model):
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
-    role = db.Column(db.String, nullable=True)
+    role = db.Column(db.String(32), nullable=True)
     password_hash = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 

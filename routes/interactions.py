@@ -6,6 +6,7 @@ from database.db_connection import get_db
 from database.models import Lead, Interaction
 from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
+from utils.permissions import require_lead_access, COUNSELLOR
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 
@@ -23,6 +24,8 @@ def update_status(lead_id):
     lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
+    if current_user.role == COUNSELLOR and lead.assigned_to != current_user.user_id:
+        abort(403)
 
     lead.status = new_status
 
@@ -32,7 +35,7 @@ def update_status(lead_id):
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        abort(400) # Bad status or constraint violation
+        abort(400)
 
     return redirect(f"/leads/{lead_id}")
 
@@ -54,12 +57,12 @@ def auto_add_interaction(lead_id):
         except ValueError:
             pass
 
-    # Check if lead exists first (to raise 404 if not found)
     lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
+    if current_user.role == COUNSELLOR and lead.assigned_to != current_user.user_id:
+        abort(403)
 
-    # Create new interaction
     interaction = Interaction(
         lead_id=lead_id,
         interaction_type=interaction_type,
@@ -69,7 +72,6 @@ def auto_add_interaction(lead_id):
     )
     db.session.add(interaction)
 
-    # Smart Status Suggestion Logic
     if interaction_type == "call":
         lead.status = 'contacted'
     elif interaction_type == "visit":
@@ -96,12 +98,12 @@ def quick_action(lead_id):
 
     action_type = request.form.get("action_type")
 
-    # Check if lead exists first
     lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
+    if current_user.role == COUNSELLOR and lead.assigned_to != current_user.user_id:
+        abort(403)
 
-    # Store as interaction
     interaction = Interaction(
         lead_id=lead_id,
         interaction_type=action_type,

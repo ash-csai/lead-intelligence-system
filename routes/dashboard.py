@@ -10,6 +10,7 @@ from modules.analytics_engine import (
     build_priority_suggestions,
     find_neglected_leads,
 )
+from utils.permissions import COUNSELLOR
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -20,11 +21,11 @@ def dashboard():
     db = get_db()
     organization_id = current_user.organization_id
 
-    counts = get_pipeline_counts(db, organization_id)
-    upcoming = get_upcoming_followups(db, organization_id)
-    hot_leads, warm_leads, cold_leads = get_lead_buckets(db, organization_id)
-    urgent = build_priority_suggestions(db, organization_id=organization_id)
-    inactive = find_neglected_leads(db, organization_id)
+    counts = get_pipeline_counts(db, organization_id=organization_id, user=current_user)
+    upcoming = get_upcoming_followups(db, organization_id=organization_id, user=current_user)
+    hot_leads, warm_leads, cold_leads = get_lead_buckets(db, organization_id=organization_id, user=current_user)
+    urgent = build_priority_suggestions(db, organization_id=organization_id, user=current_user)
+    inactive = find_neglected_leads(db, organization_id=organization_id, user=current_user)
 
     return render_template(
         "dashboard.html",
@@ -57,6 +58,7 @@ def analytics():
             func.count(Lead.lead_id)
         )
         .filter(Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .group_by(Lead.city)
         .order_by(func.count(Lead.lead_id).desc())
         .all()
@@ -69,6 +71,7 @@ def analytics():
             func.count(Lead.lead_id)
         )
         .filter(Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .group_by(Lead.lead_source)
         .order_by(func.count(Lead.lead_id).desc())
         .all()
@@ -81,6 +84,7 @@ def analytics():
             func.count(Lead.lead_id)
         )
         .filter(Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .group_by(Lead.status)
         .all()
     ]

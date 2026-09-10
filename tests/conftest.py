@@ -67,11 +67,12 @@ def client(app):
         from database.models import db, User
         existing = db.session.query(User).filter(User.email == "admin@example.com").first()
         if existing is None:
-            existing = User(name="Test Admin", email="admin@example.com", role="admin", organization_id=1)
+            existing = User(name="Test Admin", email="admin@example.com", role="Admin", organization_id=1)
             existing.set_password("secret")
             db.session.add(existing)
             db.session.commit()
         else:
+            existing.role = "Admin"
             existing.set_password("secret")
             db.session.commit()
 

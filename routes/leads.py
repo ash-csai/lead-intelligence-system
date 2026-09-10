@@ -6,6 +6,7 @@ from database.db_connection import get_db
 from database.models import Lead, Institution, Interaction
 from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
+from utils.permissions import require_lead_access, user_can_access_lead, COUNSELLOR, MANAGER, ADMIN
 from sqlalchemy import or_
 from datetime import date
 
@@ -25,17 +26,15 @@ def lead_list():
     course = request.args.get("course")
 
     # Start with base query
-    leads_query = db.session.query(Lead).filter(Lead.organization_id == organization_id).order_by(Lead.created_at.desc())
+    leads_query = db.session.query(Lead).filter(Lead.organization_id == organization_id)
+    if current_user.role == COUNSELLOR:
+        leads_query = leads_query.filter(Lead.assigned_to == current_user.user_id)
+    leads_query = leads_query.order_by(Lead.created_at.desc())
 
     # Apply filters
     if query:
         search_term = f"%{query}%"
-        leads_query = leads_query.filter(
-            or_(
-                Lead.student_name.ilike(search_term),
-                Lead.phone.ilike(search_term)
-            )
-        )
+        leads_query = leads_query.filter(or_(Lead.student_name.ilike(search_term), Lead.phone.ilike(search_term)))
     if city:
         leads_query = leads_query.filter(Lead.city == city)
     if status:
@@ -56,18 +55,17 @@ def lead_detail(lead_id):
     organization_id = current_user.organization_id
 
     lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
-
     if lead is None:
         abort(404)
+
+    # Counsellor must only see their own assigned lead.
+    if current_user.role == COUNSELLOR and lead.assigned_to != current_user.user_id:
+        abort(403)
 
     # Interactions are eager-loaded via the relationship
     interactions = lead.interactions
 
-    return render_template(
-        "lead_detail.html",
-        lead=lead,
-        interactions=interactions
-    )
+    return render_template("lead_detail.html", lead=lead, interactions=interactions)
 
 
 @leads_bp.route('/leads/add', methods=['GET', 'POST'])
@@ -77,31 +75,27 @@ def add_lead():
     db = get_db()
     organization_id = current_user.organization_id
 
-    # Get schools and coaching centers for the form
-    schools = db.session.query(Institution).filter(
-        Institution.type == 'school', Institution.organization_id == organization_id
-    ).all()
+    # Admin/Manager can create any lead across org; Counsellor may add only assigned-to self and is not denied here.
+    if current_user.role == COUNSELLOR:
+        return abort(403)
 
-    coachings = db.session.query(Institution).filter(
-        Institution.type == 'coaching_center', Institution.organization_id == organization_id
-    ).all()
+    # Get schools and coaching centers for the form
+    schools = db.session.query(Institution).filter(Institution.type == 'school', Institution.organization_id == organization_id).all()
+    coachings = db.session.query(Institution).filter(Institution.type == 'coaching_center', Institution.organization_id == organization_id).all()
 
     if request.method == "POST":
         student_name = request.form.get("student_name", "").strip()
         phone = request.form.get("phone", "").strip()
 
-        # Validation
         if not student_name:
             return "Student name is required"
         if not phone:
             return "Phone number is required"
 
-        # Check for duplicate phone
         existing = db.session.query(Lead).filter(Lead.phone == phone, Lead.organization_id == organization_id).first()
         if existing:
             return "Lead with this phone already exists"
 
-        # Get form data
         city = request.form.get("city", "").strip()
         school_id = normalize_form_input("school_id", request.form.get("school_id", ""))
         coaching_id = normalize_form_input("coaching_id", request.form.get("coaching_id", ""))
@@ -110,7 +104,6 @@ def add_lead():
         interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
         notes = request.form.get("notes", "").strip()
 
-        # Create new lead
         new_lead = Lead(
             student_name=student_name,
             phone=phone,
@@ -124,24 +117,19 @@ def add_lead():
             lead_score=0,
             status="new",
             organization_id=organization_id,
+            assigned_to=current_user.user_id,
         )
 
         db.session.add(new_lead)
-        db.session.flush()  # Get the lead_id without committing
-
+        db.session.flush()
         lead_id = new_lead.lead_id
 
-        # Recalculate score
         recalculate_and_persist_score(db, lead_id)
         db.session.commit()
 
         return redirect("/leads")
 
-    return render_template(
-        "add_lead.html",
-        schools=schools,
-        coachings=coachings
-    )
+    return render_template("add_lead.html", schools=schools, coachings=coachings)
 
 
 @leads_bp.route('/leads/edit/<int:lead_id>', methods=['GET', 'POST'])
@@ -152,9 +140,11 @@ def edit_lead(lead_id):
     organization_id = current_user.organization_id
 
     lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
-
     if lead is None:
         abort(404)
+
+    if current_user.role == COUNSELLOR and lead.assigned_to != current_user.user_id:
+        abort(403)
 
     if request.method == "POST":
         student_name = request.form.get("student_name", "").strip()
@@ -164,17 +154,10 @@ def edit_lead(lead_id):
         interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
         notes = request.form.get("notes", "").strip()
 
-        # Check for duplicate phone (excluding current lead)
-        existing = db.session.query(Lead).filter(
-            Lead.phone == phone,
-            Lead.lead_id != lead_id,
-            Lead.organization_id == organization_id,
-        ).first()
-
+        existing = db.session.query(Lead).filter(Lead.phone == phone, Lead.lead_id != lead_id, Lead.organization_id == organization_id).first()
         if existing:
             return "Lead with this phone already exists"
 
-        # Update lead
         lead.student_name = student_name
         lead.phone = phone
         lead.city = city
@@ -182,7 +165,6 @@ def edit_lead(lead_id):
         lead.interest_level = interest_level
         lead.notes = notes
 
-        # Recalculate score (might change if interest_level changed)
         recalculate_and_persist_score(db, lead_id)
         db.session.commit()
 
@@ -199,47 +181,31 @@ def followups():
     organization_id = current_user.organization_id
 
     today = (
-        db.session.query(
-            Lead.student_name,
-            Lead.phone,
-            Interaction.notes,
-            Interaction.follow_up_date
-        )
+        db.session.query(Lead.student_name, Lead.phone, Interaction.notes, Interaction.follow_up_date)
         .join(Lead, Interaction.lead_id == Lead.lead_id)
         .filter(Interaction.follow_up_date == today_dt, Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .order_by(Interaction.follow_up_date)
         .all()
     )
 
     overdue = (
-        db.session.query(
-            Lead.student_name,
-            Lead.phone,
-            Interaction.notes,
-            Interaction.follow_up_date
-        )
+        db.session.query(Lead.student_name, Lead.phone, Interaction.notes, Interaction.follow_up_date)
         .join(Lead, Interaction.lead_id == Lead.lead_id)
         .filter(Interaction.follow_up_date < today_dt, Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .order_by(Interaction.follow_up_date)
         .all()
     )
 
     upcoming = (
-        db.session.query(
-            Lead.student_name,
-            Lead.phone,
-            Interaction.notes,
-            Interaction.follow_up_date
-        )
+        db.session.query(Lead.student_name, Lead.phone, Interaction.notes, Interaction.follow_up_date)
         .join(Lead, Interaction.lead_id == Lead.lead_id)
         .filter(Interaction.follow_up_date > today_dt, Lead.organization_id == organization_id)
+        .filter(Lead.assigned_to == current_user.user_id if current_user.role == COUNSELLOR else True)
         .order_by(Interaction.follow_up_date)
         .all()
     )
 
-    return render_template(
-        "followups.html",
-        today=today,
-        overdue=overdue,
-        upcoming=upcoming
-    )
+    return render_template("followups.html", today=today, overdue=overdue, upcoming=upcoming)
+
