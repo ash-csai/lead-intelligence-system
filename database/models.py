@@ -7,6 +7,15 @@ from sqlalchemy import CheckConstraint
 db = SQLAlchemy()
 
 
+class Organization(db.Model):
+    """Organizations (tenants) table."""
+
+    __tablename__ = "organizations"
+
+    organization_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String, nullable=False)
+
+
 class Institution(db.Model):
     """Institutions table — schools and coaching centers."""
 
@@ -15,6 +24,12 @@ class Institution(db.Model):
         CheckConstraint("type IN ('school','coaching_center')"),
     )
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organizations.organization_id"),
+        nullable=False,
+        default=1,
+    )
     institution_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
     type = db.Column(
@@ -54,6 +69,12 @@ class Lead(db.Model):
         CheckConstraint("status IN ('new','contacted','interested','applied','admitted','lost')"),
     )
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organizations.organization_id"),
+        nullable=False,
+        default=1,
+    )
     lead_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     student_name = db.Column(db.String, nullable=False)
     phone = db.Column(db.String, unique=True, nullable=True)
@@ -103,6 +124,12 @@ class Interaction(db.Model):
         CheckConstraint("interaction_type IN ('call','visit','application','whatsapp','email')"),
     )
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organizations.organization_id"),
+        nullable=False,
+        default=1,
+    )
     interaction_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     lead_id = db.Column(
         db.Integer,
@@ -126,6 +153,12 @@ class User(db.Model):
 
     __tablename__ = "users"
 
+    organization_id = db.Column(
+        db.Integer,
+        db.ForeignKey("organizations.organization_id"),
+        nullable=False,
+        default=1,
+    )
     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
