@@ -3,6 +3,8 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import CheckConstraint
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -148,8 +150,8 @@ class Interaction(db.Model):
         return f"<Interaction {self.interaction_id}: {self.interaction_type}>"
 
 
-class User(db.Model):
-    """Users table — for future expansion."""
+class User(UserMixin, db.Model):
+    """Users table — logged-in account records."""
 
     __tablename__ = "users"
 
@@ -163,7 +165,23 @@ class User(db.Model):
     name = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
     role = db.Column(db.String, nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def get_id(self):
+        return str(self.user_id)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_active(self):
+        return True
 
     def __repr__(self):
         return f"<User {self.user_id}: {self.name}>"

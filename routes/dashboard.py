@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template
+from flask_login import login_required, current_user
 from database.db_connection import get_db
 from database.models import Lead
 from sqlalchemy import func
@@ -14,14 +15,16 @@ dashboard_bp = Blueprint('dashboard', __name__)
 
 
 @dashboard_bp.route('/')
+@login_required
 def dashboard():
     db = get_db()
+    organization_id = current_user.organization_id
 
-    counts = get_pipeline_counts(db)
-    upcoming = get_upcoming_followups(db)
-    hot_leads, warm_leads, cold_leads = get_lead_buckets(db)
-    urgent = build_priority_suggestions(db)
-    inactive = find_neglected_leads(db)
+    counts = get_pipeline_counts(db, organization_id)
+    upcoming = get_upcoming_followups(db, organization_id)
+    hot_leads, warm_leads, cold_leads = get_lead_buckets(db, organization_id)
+    urgent = build_priority_suggestions(db, organization_id=organization_id)
+    inactive = find_neglected_leads(db, organization_id)
 
     return render_template(
         "dashboard.html",
@@ -42,8 +45,10 @@ def dashboard():
 
 
 @dashboard_bp.route('/analytics')
+@login_required
 def analytics():
     db = get_db()
+    organization_id = current_user.organization_id
 
     city_stats = [
         {"city": city, "total": total}
@@ -51,6 +56,7 @@ def analytics():
             Lead.city,
             func.count(Lead.lead_id)
         )
+        .filter(Lead.organization_id == organization_id)
         .group_by(Lead.city)
         .order_by(func.count(Lead.lead_id).desc())
         .all()
@@ -62,6 +68,7 @@ def analytics():
             Lead.lead_source,
             func.count(Lead.lead_id)
         )
+        .filter(Lead.organization_id == organization_id)
         .group_by(Lead.lead_source)
         .order_by(func.count(Lead.lead_id).desc())
         .all()
@@ -73,6 +80,7 @@ def analytics():
             Lead.status,
             func.count(Lead.lead_id)
         )
+        .filter(Lead.organization_id == organization_id)
         .group_by(Lead.status)
         .all()
     ]

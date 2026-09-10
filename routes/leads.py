@@ -1,6 +1,7 @@
 """Leads routes using SQLAlchemy ORM."""
 
 from flask import Blueprint, render_template, request, redirect, abort
+from flask_login import login_required, current_user
 from database.db_connection import get_db
 from database.models import Lead, Institution, Interaction
 from modules.scoring_engine import recalculate_and_persist_score
@@ -12,18 +13,20 @@ leads_bp = Blueprint('leads', __name__)
 
 
 @leads_bp.route('/leads')
+@login_required
 def lead_list():
     """List all leads with optional filtering by query, city, status, course."""
     db = get_db()
-    
+    organization_id = current_user.organization_id
+
     query = request.args.get("q")
     city = request.args.get("city")
     status = request.args.get("status")
     course = request.args.get("course")
-    
+
     # Start with base query
-    leads_query = db.session.query(Lead).order_by(Lead.created_at.desc())
-    
+    leads_query = db.session.query(Lead).filter(Lead.organization_id == organization_id).order_by(Lead.created_at.desc())
+
     # Apply filters
     if query:
         search_term = f"%{query}%"
@@ -39,25 +42,27 @@ def lead_list():
         leads_query = leads_query.filter(Lead.status == status)
     if course:
         leads_query = leads_query.filter(Lead.course_interest == course)
-    
+
     leads = leads_query.all()
-    
+
     return render_template("leads.html", leads=leads)
 
 
 @leads_bp.route('/leads/<int:lead_id>')
+@login_required
 def lead_detail(lead_id):
     """Show details for a specific lead and its interactions."""
     db = get_db()
-    
-    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
-    
+    organization_id = current_user.organization_id
+
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
+
     if lead is None:
         abort(404)
-    
+
     # Interactions are eager-loaded via the relationship
     interactions = lead.interactions
-    
+
     return render_template(
         "lead_detail.html",
         lead=lead,
@@ -66,34 +71,36 @@ def lead_detail(lead_id):
 
 
 @leads_bp.route('/leads/add', methods=['GET', 'POST'])
+@login_required
 def add_lead():
     """Add a new lead."""
     db = get_db()
-    
+    organization_id = current_user.organization_id
+
     # Get schools and coaching centers for the form
     schools = db.session.query(Institution).filter(
-        Institution.type == 'school'
+        Institution.type == 'school', Institution.organization_id == organization_id
     ).all()
-    
+
     coachings = db.session.query(Institution).filter(
-        Institution.type == 'coaching_center'
+        Institution.type == 'coaching_center', Institution.organization_id == organization_id
     ).all()
-    
+
     if request.method == "POST":
         student_name = request.form.get("student_name", "").strip()
         phone = request.form.get("phone", "").strip()
-        
+
         # Validation
         if not student_name:
             return "Student name is required"
         if not phone:
             return "Phone number is required"
-        
+
         # Check for duplicate phone
-        existing = db.session.query(Lead).filter(Lead.phone == phone).first()
+        existing = db.session.query(Lead).filter(Lead.phone == phone, Lead.organization_id == organization_id).first()
         if existing:
             return "Lead with this phone already exists"
-        
+
         # Get form data
         city = request.form.get("city", "").strip()
         school_id = normalize_form_input("school_id", request.form.get("school_id", ""))
@@ -102,7 +109,7 @@ def add_lead():
         lead_source = request.form.get("lead_source", "").strip()
         interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
         notes = request.form.get("notes", "").strip()
-        
+
         # Create new lead
         new_lead = Lead(
             student_name=student_name,
@@ -115,20 +122,21 @@ def add_lead():
             interest_level=interest_level,
             notes=notes,
             lead_score=0,
-            status="new"
+            status="new",
+            organization_id=organization_id,
         )
-        
+
         db.session.add(new_lead)
         db.session.flush()  # Get the lead_id without committing
-        
+
         lead_id = new_lead.lead_id
-        
+
         # Recalculate score
         recalculate_and_persist_score(db, lead_id)
         db.session.commit()
-        
+
         return redirect("/leads")
-    
+
     return render_template(
         "add_lead.html",
         schools=schools,
@@ -137,15 +145,17 @@ def add_lead():
 
 
 @leads_bp.route('/leads/edit/<int:lead_id>', methods=['GET', 'POST'])
+@login_required
 def edit_lead(lead_id):
     """Edit an existing lead."""
     db = get_db()
-    
-    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
-    
+    organization_id = current_user.organization_id
+
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
+
     if lead is None:
         abort(404)
-    
+
     if request.method == "POST":
         student_name = request.form.get("student_name", "").strip()
         phone = request.form.get("phone", "").strip()
@@ -153,16 +163,17 @@ def edit_lead(lead_id):
         course_interest = request.form.get("course_interest", "").strip()
         interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
         notes = request.form.get("notes", "").strip()
-        
+
         # Check for duplicate phone (excluding current lead)
         existing = db.session.query(Lead).filter(
             Lead.phone == phone,
-            Lead.lead_id != lead_id
+            Lead.lead_id != lead_id,
+            Lead.organization_id == organization_id,
         ).first()
-        
+
         if existing:
             return "Lead with this phone already exists"
-        
+
         # Update lead
         lead.student_name = student_name
         lead.phone = phone
@@ -170,20 +181,22 @@ def edit_lead(lead_id):
         lead.course_interest = course_interest
         lead.interest_level = interest_level
         lead.notes = notes
-        
+
         # Recalculate score (might change if interest_level changed)
         recalculate_and_persist_score(db, lead_id)
         db.session.commit()
-        
+
         return redirect(f"/leads/{lead_id}")
-    
+
     return render_template("edit_lead.html", lead=lead)
 
 
 @leads_bp.route('/followups')
+@login_required
 def followups():
     db = get_db()
     today_dt = date.today()
+    organization_id = current_user.organization_id
 
     today = (
         db.session.query(
@@ -193,7 +206,7 @@ def followups():
             Interaction.follow_up_date
         )
         .join(Lead, Interaction.lead_id == Lead.lead_id)
-        .filter(Interaction.follow_up_date == today_dt)
+        .filter(Interaction.follow_up_date == today_dt, Lead.organization_id == organization_id)
         .order_by(Interaction.follow_up_date)
         .all()
     )
@@ -206,7 +219,7 @@ def followups():
             Interaction.follow_up_date
         )
         .join(Lead, Interaction.lead_id == Lead.lead_id)
-        .filter(Interaction.follow_up_date < today_dt)
+        .filter(Interaction.follow_up_date < today_dt, Lead.organization_id == organization_id)
         .order_by(Interaction.follow_up_date)
         .all()
     )
@@ -219,7 +232,7 @@ def followups():
             Interaction.follow_up_date
         )
         .join(Lead, Interaction.lead_id == Lead.lead_id)
-        .filter(Interaction.follow_up_date > today_dt)
+        .filter(Interaction.follow_up_date > today_dt, Lead.organization_id == organization_id)
         .order_by(Interaction.follow_up_date)
         .all()
     )

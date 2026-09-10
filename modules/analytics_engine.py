@@ -7,8 +7,8 @@ from lead_intelligence.priority import build_priority_details
 from database.models import Lead, Interaction
 
 
-def get_pipeline_counts(db):
-    """Get counts of leads by status."""
+def get_pipeline_counts(db, organization_id=None):
+    """Get counts of leads by status for the current organization."""
     counts = {
         "new": 0,
         "contacted": 0,
@@ -18,27 +18,27 @@ def get_pipeline_counts(db):
         "lost": 0,
     }
 
-    # Query leads grouped by status
-    status_counts = (
-        db.session.query(Lead.status, func.count(Lead.lead_id).label("total"))
-        .group_by(Lead.status)
-        .all()
-    )
+    query = db.session.query(Lead.status, func.count(Lead.lead_id).label("total"))
+    if organization_id is not None:
+        query = query.filter(Lead.organization_id == organization_id)
+    status_counts = query.group_by(Lead.status).all()
 
     for status, total in status_counts:
         if status in counts:
             counts[status] = total
 
-    counts["total"] = db.session.query(func.count(Lead.lead_id)).scalar() or 0
+    total_query = db.session.query(func.count(Lead.lead_id))
+    if organization_id is not None:
+        total_query = total_query.filter(Lead.organization_id == organization_id)
+    counts["total"] = total_query.scalar() or 0
     return counts
 
 
-def get_upcoming_followups(db, limit=5):
-    """Get upcoming follow-ups (next 5 by default)."""
+def get_upcoming_followups(db, organization_id=None, limit=5):
+    """Get upcoming follow-ups (next 5 by default) for one organization."""
     today = datetime.now().date()
-    
-    # Find interactions with future follow-up dates
-    followups = (
+
+    query = (
         db.session.query(Lead.student_name, Interaction.follow_up_date)
         .join(Interaction, Lead.lead_id == Interaction.lead_id)
         .filter(
@@ -47,52 +47,39 @@ def get_upcoming_followups(db, limit=5):
                 Interaction.follow_up_date >= today,
             )
         )
-        .order_by(Interaction.follow_up_date.asc())
-        .limit(limit)
-        .all()
     )
+    if organization_id is not None:
+        query = query.filter(Lead.organization_id == organization_id)
+
+    followups = query.order_by(Interaction.follow_up_date.asc()).limit(limit).all()
 
     # Convert to dict-like objects for template compatibility
     return [{"student_name": name, "follow_up_date": date} for name, date in followups]
 
 
-def get_lead_buckets(db):
-    """Get leads categorized as hot, warm, and cold by score."""
-    hot_leads = (
-        db.session.query(Lead)
-        .filter(Lead.lead_score >= HOT_LEAD_THRESHOLD)
-        .order_by(Lead.lead_score.desc())
-        .all()
-    )
+def get_lead_buckets(db, organization_id=None):
+    """Get leads categorized as hot, warm, and cold by score, scoped to the current organization."""
+    hot_query = db.session.query(Lead).filter(Lead.lead_score >= HOT_LEAD_THRESHOLD)
+    warm_query = db.session.query(Lead).filter(and_(Lead.lead_score >= WARM_LEAD_THRESHOLD, Lead.lead_score < HOT_LEAD_THRESHOLD))
+    cold_query = db.session.query(Lead).filter(Lead.lead_score < WARM_LEAD_THRESHOLD)
 
-    warm_leads = (
-        db.session.query(Lead)
-        .filter(
-            and_(
-                Lead.lead_score >= WARM_LEAD_THRESHOLD,
-                Lead.lead_score < HOT_LEAD_THRESHOLD,
-            )
-        )
-        .order_by(Lead.lead_score.desc())
-        .all()
-    )
+    if organization_id is not None:
+        hot_query = hot_query.filter(Lead.organization_id == organization_id)
+        warm_query = warm_query.filter(Lead.organization_id == organization_id)
+        cold_query = cold_query.filter(Lead.organization_id == organization_id)
 
-    cold_leads = (
-        db.session.query(Lead)
-        .filter(Lead.lead_score < WARM_LEAD_THRESHOLD)
-        .order_by(Lead.lead_score.desc())
-        .all()
-    )
+    hot_leads = hot_query.order_by(Lead.lead_score.desc()).all()
+    warm_leads = warm_query.order_by(Lead.lead_score.desc()).all()
+    cold_leads = cold_query.order_by(Lead.lead_score.desc()).all()
 
     return hot_leads, warm_leads, cold_leads
 
 
-def build_priority_suggestions(db, today=None):
-    """Build priority suggestions for leads with upcoming follow-ups."""
+def build_priority_suggestions(db, today=None, organization_id=None):
+    """Build priority suggestions for leads with upcoming follow-ups, scoped to organization."""
     if today is None:
         today = datetime.now().date()
 
-    # Find leads with follow-up dates, getting the earliest one per lead
     priority_leads_subquery = (
         db.session.query(
             Lead.lead_id,
@@ -100,12 +87,12 @@ def build_priority_suggestions(db, today=None):
         )
         .outerjoin(Interaction, Lead.lead_id == Interaction.lead_id)
         .filter(Interaction.follow_up_date.isnot(None))
-        .group_by(Lead.lead_id)
-        .having(func.min(Interaction.follow_up_date).isnot(None))
-        .subquery()
     )
+    if organization_id is not None:
+        priority_leads_subquery = priority_leads_subquery.filter(Lead.organization_id == organization_id)
 
-    # Get full lead records with their next follow-up dates
+    priority_leads_subquery = priority_leads_subquery.group_by(Lead.lead_id).having(func.min(Interaction.follow_up_date).isnot(None)).subquery()
+
     priority_leads = (
         db.session.query(Lead, priority_leads_subquery.c.next_followup)
         .join(priority_leads_subquery, Lead.lead_id == priority_leads_subquery.c.lead_id)
@@ -114,7 +101,6 @@ def build_priority_suggestions(db, today=None):
 
     urgent = []
 
-    # Get last interaction for each lead
     last_action_lookup = {}
     for lead, _ in priority_leads:
         last_interaction = (
@@ -126,10 +112,8 @@ def build_priority_suggestions(db, today=None):
         if last_interaction:
             last_action_lookup[lead.lead_id] = last_interaction[0]
 
-    # Build priority details for each lead
     for lead, next_followup in priority_leads:
         if next_followup:
-            # Create a dict-like object with the lead data and next_followup
             lead_dict = {
                 "lead_id": lead.lead_id,
                 "student_name": lead.student_name,
@@ -146,7 +130,7 @@ def build_priority_suggestions(db, today=None):
                 "notes": lead.notes,
                 "next_followup": next_followup.strftime("%Y-%m-%d"),
             }
-            
+
             priority_details = build_priority_details(
                 lead_dict,
                 last_action=last_action_lookup.get(lead.lead_id),
@@ -154,19 +138,20 @@ def build_priority_suggestions(db, today=None):
             )
             urgent.append(priority_details)
 
-    # Sort by priority score
     urgent = sorted(urgent, key=lambda x: x["priority_score"], reverse=True)
     return urgent
 
 
-def find_neglected_leads(db):
-    """Find leads that haven't had recent interactions."""
-    # Get all leads with their last interaction date
-    leads = db.session.query(Lead).all()
+def find_neglected_leads(db, organization_id=None):
+    """Find leads that haven't had recent interactions for the current organization."""
+    leads_query = db.session.query(Lead)
+    if organization_id is not None:
+        leads_query = leads_query.filter(Lead.organization_id == organization_id)
+
+    leads = leads_query.all()
     inactive = []
 
     for lead in leads:
-        # Get the most recent interaction for this lead
         last_interaction = (
             db.session.query(Interaction.created_at)
             .filter(Interaction.lead_id == lead.lead_id)
@@ -205,7 +190,6 @@ def find_neglected_leads(db):
             }
             inactive.append(lead_dict)
 
-    # Sort by worst cases
     inactive = sorted(inactive, key=lambda x: x["days_idle"], reverse=True)
     return inactive
 

@@ -1,6 +1,7 @@
 """Interactions routes using SQLAlchemy ORM."""
 
 from flask import Blueprint, request, redirect, abort
+from flask_login import login_required, current_user
 from database.db_connection import get_db
 from database.models import Lead, Interaction
 from modules.scoring_engine import recalculate_and_persist_score
@@ -12,12 +13,14 @@ interactions_bp = Blueprint('interactions', __name__)
 
 
 @interactions_bp.route('/leads/update_status/<int:lead_id>', methods=['POST'])
+@login_required
 def update_status(lead_id):
     db = get_db()
+    organization_id = current_user.organization_id
 
     new_status = request.form.get("status")
 
-    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
 
@@ -35,8 +38,10 @@ def update_status(lead_id):
 
 
 @interactions_bp.route('/interactions/add/<int:lead_id>', methods=['POST'])
+@login_required
 def auto_add_interaction(lead_id):
     db = get_db()
+    organization_id = current_user.organization_id
 
     interaction_type = request.form.get("interaction_type")
     notes = request.form.get("notes")
@@ -50,7 +55,7 @@ def auto_add_interaction(lead_id):
             pass
 
     # Check if lead exists first (to raise 404 if not found)
-    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
 
@@ -59,7 +64,8 @@ def auto_add_interaction(lead_id):
         lead_id=lead_id,
         interaction_type=interaction_type,
         notes=notes,
-        follow_up_date=follow_up_date
+        follow_up_date=follow_up_date,
+        organization_id=organization_id,
     )
     db.session.add(interaction)
 
@@ -83,13 +89,15 @@ def auto_add_interaction(lead_id):
 
 
 @interactions_bp.route('/quick_action/<int:lead_id>', methods=['POST'])
+@login_required
 def quick_action(lead_id):
     db = get_db()
+    organization_id = current_user.organization_id
 
     action_type = request.form.get("action_type")
 
     # Check if lead exists first
-    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).first()
+    lead = db.session.query(Lead).filter(Lead.lead_id == lead_id, Lead.organization_id == organization_id).first()
     if lead is None:
         abort(404)
 
@@ -97,7 +105,8 @@ def quick_action(lead_id):
     interaction = Interaction(
         lead_id=lead_id,
         interaction_type=action_type,
-        notes="Quick action performed"
+        notes="Quick action performed",
+        organization_id=organization_id,
     )
     db.session.add(interaction)
 
