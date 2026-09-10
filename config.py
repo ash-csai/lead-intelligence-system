@@ -6,6 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB = BASE_DIR / "lead_system.db"
 
 
+def default_sqlite_uri():
+    """Return the repository-local SQLite URI used only as a convenience fallback."""
+    return f"sqlite:///{DEFAULT_DB.as_posix()}"
+
+
 class Config:
     """Base Flask configuration.
 
@@ -17,19 +22,19 @@ class Config:
     DEBUG = False
     TESTING = False
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB.as_posix()}")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", default_sqlite_uri())
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
     TESTING = False
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB.as_posix()}")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", default_sqlite_uri())
 
 
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{DEFAULT_DB.as_posix()}")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", default_sqlite_uri())
 
 
 class TestingConfig(Config):

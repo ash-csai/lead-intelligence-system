@@ -7,7 +7,7 @@ from database.models import db
 
 
 def configure_db(app):
-    """Configure SQLAlchemy for the Flask app and register SQLite FK enforcement.
+    """Configure SQLAlchemy for the Flask app and register SQLite FK enforcement only when SQLite is selected.
 
     Values come from the Flask config object instead of a repository-level
     hardcoded `DB_NAME` variable, keeping the database URI centralized and
@@ -22,10 +22,11 @@ def configure_db(app):
     app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
     db.init_app(app)
 
-    @event.listens_for(Engine, "connect")
-    def enable_sqlite_fk(dbapi_connection, connection_record):
-        if isinstance(dbapi_connection, sqlite3.Connection):
-            dbapi_connection.execute("PRAGMA foreign_keys=ON")
+    if uri.startswith("sqlite"):
+        @event.listens_for(Engine, "connect")
+        def enable_sqlite_fk(dbapi_connection, connection_record):
+            if isinstance(dbapi_connection, sqlite3.Connection):
+                dbapi_connection.execute("PRAGMA foreign_keys=ON")
 
 
 def get_db():

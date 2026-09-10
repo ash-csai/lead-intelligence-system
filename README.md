@@ -1,11 +1,11 @@
 
 # Lead Intelligence System (LIS)
 
-> A modular Lead Intelligence & CRM platform built with **Python**, **Flask**, and **SQLite** to help educational institutions manage enquiries, follow-ups, interactions, and admissions through an intelligent lead pipeline.
+> A modular Lead Intelligence & CRM platform built with **Python**, **Flask**, and **PostgreSQL** to help educational institutions manage enquiries, follow-ups, interactions, and admissions through an intelligent lead pipeline.
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue)
 ![Flask](https://img.shields.io/badge/Flask-Web%20Framework-black)
-![SQLite](https://img.shields.io/badge/Database-SQLite-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
 ![Bootstrap](https://img.shields.io/badge/UI-Bootstrap-purple)
 ![Status](https://img.shields.io/badge/Project-Active-success)
 
@@ -69,10 +69,23 @@ The project has been intentionally structured so it can grow into a larger ERP o
 |-------|------------|
 | Backend | Python |
 | Framework | Flask |
-| Database | SQLite |
+| Database | PostgreSQL (driver: psycopg) |
 | Frontend | HTML, CSS, Bootstrap |
 | Templates | Jinja2 |
 | Version Control | Git & GitHub |
+
+## PostgreSQL setup
+
+1. Install PostgreSQL locally and create a database, for example `lead_intelligence`.
+2. Install the Python driver declared in the dependency file:
+   `pip install psycopg[binary]`
+3. Export or place a `DATABASE_URL` such as:
+   `postgresql+psycopg://postgres:postgres@localhost:5432/lead_intelligence`
+4. Keep `TEST_DATABASE_URL` for the test fixture separate, usually a temporary SQLite path or a second PostgreSQL database for the test suite.
+5. Run Alembic migrations with that environment variable loaded:
+   `DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/lead_intelligence python -m alembic upgrade head`
+
+The repository still supplies a SQLite fallback only as a convenient local development/test default and should not be the primary production database in this branch.
 
 ---
 

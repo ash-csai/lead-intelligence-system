@@ -21,7 +21,10 @@ if config.config_file_name is not None:
 # Add the models' MetaData object for 'autogenerate' support
 target_metadata = db.metadata
 
-# Set the sqlalchemy url from environment or default
+# Set the sqlalchemy url from environment or default. PostgreSQL URLs should be
+# supplied as `postgresql+psycopg://...` or `postgresql+psycopg2://...` and
+# the SQLite file is only a local convenience fallback. Keep the migration
+# environment aligned with the project config chain.
 sqlalchemy_url = os.environ.get("DATABASE_URL", "sqlite:///lead_system.db")
 if sqlalchemy_url:
     config.set_main_option("sqlalchemy.url", sqlalchemy_url)
@@ -45,7 +48,7 @@ def run_migrations_online() -> None:
     """Run migrations in 'online' mode (requires live database connection)."""
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = config.get_main_option("sqlalchemy.url")
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
