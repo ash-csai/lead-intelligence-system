@@ -171,6 +171,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String, nullable=True)
     role = db.Column(db.String(32), nullable=True)
     password_hash = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def get_id(self):
@@ -183,10 +184,6 @@ class User(UserMixin, db.Model):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, password)
-
-    @property
-    def is_active(self):
-        return True
 
     def __repr__(self):
         return f"<User {self.user_id}: {self.name}>"

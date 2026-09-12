@@ -6,6 +6,64 @@ import pytest
 class TestRolePermissionMatrix:
     """Role-based authorization should be enforceable through the app client."""
 
+    def test_admin_can_create_users_for_each_role_and_managers_and_counsellors_get_403(self, app):
+        with app.app_context():
+            from database.models import User, db
+            db.session.query(User).delete()
+            db.session.commit()
+
+            admin = User(name="Admin", email="admin-team@example.com", role="Admin", organization_id=1, is_active=True)
+            admin.set_password("secret")
+            db.session.add(admin)
+            db.session.commit()
+
+            client = app.test_client()
+            login_resp = client.post("/login", data={"email": "admin-team@example.com", "password": "secret"}, follow_redirects=True)
+            assert login_resp.status_code in (200, 302)
+
+            for role in ["Admin", "Manager", "Counsellor"]:
+                create_resp = client.post(
+                    "/team",
+                    data={
+                        "name": f"{role} User",
+                        "email": f"{role.lower()}-team@example.com",
+                        "password": "secret",
+                        "role": role,
+                    },
+                    follow_redirects=True,
+                )
+                assert create_resp.status_code == 200
+
+            created = db.session.query(User).filter(User.organization_id == 1).all()
+            assert any(user.role == "Admin" for user in created)
+            assert any(user.role == "Manager" for user in created)
+            assert any(user.role == "Counsellor" for user in created)
+
+            client.get("/logout")
+
+            manager = User(name="Manager", email="manager-team@example.com", role="Manager", organization_id=1, is_active=True)
+            manager.set_password("secret")
+            db.session.add(manager)
+            db.session.commit()
+
+            # Login as a member of the org but not Admin and assert team access is forbidden.
+            login_resp = client.post("/login", data={"email": "manager-team@example.com", "password": "secret"}, follow_redirects=True)
+            assert login_resp.status_code in (200, 302)
+            manager_team_resp = client.get("/team")
+            assert manager_team_resp.status_code == 403
+
+            client.get("/logout")
+
+            counsellor = User(name="Counsellor", email="counsellor-team@example.com", role="Counsellor", organization_id=1, is_active=True)
+            counsellor.set_password("secret")
+            db.session.add(counsellor)
+            db.session.commit()
+
+            login_resp = client.post("/login", data={"email": "counsellor-team@example.com", "password": "secret"}, follow_redirects=True)
+            assert login_resp.status_code in (200, 302)
+            counsellor_team_resp = client.get("/team")
+            assert counsellor_team_resp.status_code == 403
+
     def test_counsellor_forbidden_on_other_counsellor_lead(self, app):
         with app.app_context():
             from database.models import User, Lead, db
