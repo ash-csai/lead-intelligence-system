@@ -57,6 +57,124 @@ class TestDashboardRoutes:
             assert b"Team overview" not in counsellor_resp.data
             assert b"Counsellor lead breakdown" not in counsellor_resp.data
 
+    def test_bulk_reassign_and_status_update_trigger_scoring_for_each_selected_lead(self, app):
+        """Bulk reassignment should respect org and role scope, and bulk status changes must recalculate every affected lead score."""
+        with app.app_context():
+            from database.models import Organization, User, Lead, db
+            from lead_intelligence.scoring import calculate_lead_score
+
+            db.session.query(Lead).delete()
+            db.session.query(User).delete()
+            db.session.query(Organization).delete()
+            db.session.commit()
+
+            org_1 = Organization(name="Org One")
+            org_2 = Organization(name="Org Two")
+            db.session.add_all([org_1, org_2])
+            db.session.commit()
+
+            manager = User(name="Manager", email="manager-bulk@example.com", role="Manager", organization_id=org_1.organization_id, is_active=True)
+            manager.set_password("secret")
+            counsellor_a = User(name="Counsellor A", email="counsellor-a-bulk@example.com", role="Counsellor", organization_id=org_1.organization_id, is_active=True)
+            counsellor_a.set_password("secret")
+            counsellor_b = User(name="Counsellor B", email="counsellor-b-bulk@example.com", role="Counsellor", organization_id=org_1.organization_id, is_active=True)
+            counsellor_b.set_password("secret")
+            outsider = User(name="Other Org Counsellor", email="outsider-bulk@example.com", role="Counsellor", organization_id=org_2.organization_id, is_active=True)
+            outsider.set_password("secret")
+            db.session.add_all([manager, counsellor_a, counsellor_b, outsider])
+            db.session.commit()
+
+            lead_1 = Lead(
+                student_name="First Bulk Lead",
+                phone="555-0100-1111",
+                city="Test City",
+                course_interest="Course",
+                lead_source="Website",
+                interest_level="high",
+                status="new",
+                lead_score=0,
+                organization_id=org_1.organization_id,
+                assigned_to=counsellor_a.user_id,
+            )
+            lead_2 = Lead(
+                student_name="Second Bulk Lead",
+                phone="555-0100-2222",
+                city="Test City",
+                course_interest="Course",
+                lead_source="Website",
+                interest_level="high",
+                status="new",
+                lead_score=0,
+                organization_id=org_1.organization_id,
+                assigned_to=counsellor_a.user_id,
+            )
+            cross_org = Lead(
+                student_name="Wrong Org Lead",
+                phone="555-0100-3333",
+                city="Other City",
+                course_interest="Course",
+                lead_source="Website",
+                interest_level="high",
+                status="new",
+                lead_score=0,
+                organization_id=org_2.organization_id,
+                assigned_to=outsider.user_id,
+            )
+            db.session.add_all([lead_1, lead_2, cross_org])
+            db.session.commit()
+
+            client = app.test_client()
+            login_resp = client.post("/login", data={"email": "manager-bulk@example.com", "password": "secret"}, follow_redirects=True)
+            assert login_resp.status_code in (200, 302)
+
+            reassign_resp = client.post(
+                "/leads/bulk_action",
+                data={
+                    "bulk_action": "reassign",
+                    "counsellor_id": counsellor_b.user_id,
+                    "lead_id": [str(lead_1.lead_id), str(lead_2.lead_id), str(cross_org.lead_id)],
+                },
+                follow_redirects=True,
+            )
+            assert reassign_resp.status_code == 200
+
+            db.session.expire_all()
+            assert db.session.query(Lead).filter(Lead.lead_id == lead_1.lead_id).one().assigned_to == counsellor_b.user_id
+            assert db.session.query(Lead).filter(Lead.lead_id == lead_2.lead_id).one().assigned_to == counsellor_b.user_id
+            assert db.session.query(Lead).filter(Lead.lead_id == cross_org.lead_id).one().assigned_to == outsider.user_id
+
+            status_resp = client.post(
+                "/leads/bulk_action",
+                data={
+                    "bulk_action": "status",
+                    "bulk_status": "contacted",
+                    "lead_id": [str(lead_1.lead_id), str(lead_2.lead_id)],
+                },
+                follow_redirects=True,
+            )
+            assert status_resp.status_code == 200
+
+            db.session.expire_all()
+            for lead_id in [lead_1.lead_id, lead_2.lead_id]:
+                lead = db.session.query(Lead).filter(Lead.lead_id == lead_id).one()
+                assert lead.status == "contacted"
+                expected = calculate_lead_score({
+                    "lead_id": lead.lead_id,
+                    "student_name": lead.student_name,
+                    "phone": lead.phone,
+                    "city": lead.city,
+                    "school_id": lead.school_id,
+                    "coaching_id": lead.coaching_id,
+                    "course_interest": lead.course_interest,
+                    "lead_source": lead.lead_source,
+                    "interest_level": lead.interest_level,
+                    "lead_score": 0,
+                    "status": "contacted",
+                    "created_at": lead.created_at,
+                    "notes": lead.notes,
+                }, [])
+                assert lead.lead_score == expected
+
     def test_analytics_loads_200(self, client):
         """Analytics route should load successfully."""
         response = client.get("/analytics")

@@ -1,9 +1,9 @@
 """Leads routes using SQLAlchemy ORM."""
 
-from flask import Blueprint, render_template, request, redirect, abort
+from flask import Blueprint, render_template, request, redirect, abort, url_for
 from flask_login import login_required, current_user
 from database.db_connection import get_db
-from database.models import Lead, Institution, Interaction
+from database.models import Lead, Institution, Interaction, User
 from modules.scoring_engine import recalculate_and_persist_score
 from utils.form_helpers import normalize_form_input
 from utils.permissions import require_lead_access, user_can_access_lead, COUNSELLOR, MANAGER, ADMIN
@@ -44,7 +44,85 @@ def lead_list():
 
     leads = leads_query.all()
 
-    return render_template("leads.html", leads=leads)
+    counsellors = []
+    if current_user.role in {ADMIN, MANAGER}:
+        counsellors = (
+            db.session.query(User)
+            .filter(User.organization_id == organization_id, User.role == COUNSELLOR)
+            .order_by(User.name.asc())
+            .all()
+        )
+
+    status_options = ["new", "contacted", "interested", "applied", "admitted", "lost"]
+
+    return render_template("leads.html", leads=leads, counsellors=counsellors, status_options=status_options)
+
+
+@leads_bp.route('/leads/bulk_action', methods=['POST'])
+@login_required
+def bulk_action():
+    """Apply a role-scoped bulk lead reassign or status update using the same scoring flow as single-item updates."""
+    db = get_db()
+    organization_id = current_user.organization_id
+    action = request.form.get("bulk_action")
+    selected_ids = request.form.getlist("lead_id")
+
+    if not selected_ids:
+        return redirect("/leads")
+
+    try:
+        parsed_ids = [int(lead_id) for lead_id in selected_ids]
+    except (TypeError, ValueError):
+        abort(400)
+
+    leads_query = db.session.query(Lead).filter(Lead.organization_id == organization_id, Lead.lead_id.in_(parsed_ids))
+    if current_user.role == COUNSELLOR:
+        leads_query = leads_query.filter(Lead.assigned_to == current_user.user_id)
+
+    leads = leads_query.all()
+    if not leads:
+        return redirect("/leads")
+
+    if action == "reassign":
+        if current_user.role not in {ADMIN, MANAGER}:
+            abort(403)
+
+        target_user_id = request.form.get("counsellor_id")
+        try:
+            target_user_id = int(target_user_id)
+        except (TypeError, ValueError):
+            abort(400)
+
+        target = (
+            db.session.query(User)
+            .filter(User.user_id == target_user_id, User.organization_id == organization_id, User.role == COUNSELLOR)
+            .first()
+        )
+        if target is None:
+            abort(400)
+
+        for lead in leads:
+            lead.assigned_to = target.user_id
+
+        db.session.commit()
+        return redirect("/leads")
+
+    if action == "status":
+        new_status = (request.form.get("bulk_status") or "").strip()
+        allowed_statuses = {"new", "contacted", "interested", "applied", "admitted", "lost"}
+        if new_status not in allowed_statuses:
+            abort(400)
+
+        # Counsellor can update only their own org-scoped leads; Manager/Admin can update the same org-wide queue.
+        for lead in leads:
+            lead.status = new_status
+            db.session.flush()
+            recalculate_and_persist_score(db, lead.lead_id)
+
+        db.session.commit()
+        return redirect("/leads")
+
+    abort(400)
 
 
 @leads_bp.route('/leads/<int:lead_id>')
