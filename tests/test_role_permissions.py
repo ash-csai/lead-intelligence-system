@@ -93,3 +93,51 @@ class TestRolePermissionMatrix:
             assert login_resp.status_code in (200, 302)
             resp_manager = client.get(f"/leads/{lead.lead_id}")
             assert resp_manager.status_code == 200
+
+    def test_counsellor_can_create_lead_and_see_it_in_own_lead_list(self, app):
+        with app.app_context():
+            from database.models import User, Lead, db
+            db.session.query(Lead).delete()
+            db.session.query(User).delete()
+            db.session.commit()
+
+            counsellor = User(name="Counsellor", email="counsellor-create@example.com", role="Counsellor", organization_id=1)
+            counsellor.set_password("secret")
+            db.session.add(counsellor)
+            db.session.commit()
+
+            client = app.test_client()
+            login_resp = client.post(
+                "/login",
+                data={"email": "counsellor-create@example.com", "password": "secret"},
+                follow_redirects=True,
+            )
+            assert login_resp.status_code in (200, 302)
+
+            get_resp = client.get("/leads/add")
+            assert get_resp.status_code == 200
+
+            post_resp = client.post(
+                "/leads/add",
+                data={
+                    "student_name": "Counsellor Created Lead",
+                    "phone": "555-0100-1111",
+                    "city": "Test City",
+                    "school_id": "",
+                    "coaching_id": "",
+                    "course_interest": "Course",
+                    "lead_source": "Website",
+                    "interest_level": "high",
+                    "notes": "Created by counsellor",
+                },
+                follow_redirects=True,
+            )
+            assert post_resp.status_code == 200
+
+            created = db.session.query(Lead).filter(Lead.phone == "555-0100-1111", Lead.organization_id == 1).first()
+            assert created is not None
+            assert created.assigned_to == counsellor.user_id
+
+            leads_resp = client.get("/leads")
+            assert leads_resp.status_code == 200
+            assert b"Counsellor Created Lead" in leads_resp.data

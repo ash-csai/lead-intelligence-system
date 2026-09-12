@@ -71,15 +71,13 @@ def lead_detail(lead_id):
 @leads_bp.route('/leads/add', methods=['GET', 'POST'])
 @login_required
 def add_lead():
-    """Add a new lead."""
+    """Add a new lead for any role in the organization."""
     db = get_db()
     organization_id = current_user.organization_id
 
-    # Admin/Manager can create any lead across org; Counsellor may add only assigned-to self and is not denied here.
-    if current_user.role == COUNSELLOR:
-        return abort(403)
-
-    # Get schools and coaching centers for the form
+    # Counsellors, Managers, and Admins may all open the add-lead form and submit a new lead.
+    # Ownership assignment is role-dependent: counsellors self-assign, while admin/manager
+    # submissions stay unassigned unless a future UI explicitly lets them pick an assignee.
     schools = db.session.query(Institution).filter(Institution.type == 'school', Institution.organization_id == organization_id).all()
     coachings = db.session.query(Institution).filter(Institution.type == 'coaching_center', Institution.organization_id == organization_id).all()
 
@@ -104,6 +102,8 @@ def add_lead():
         interest_level = normalize_form_input("interest_level", request.form.get("interest_level", ""))
         notes = request.form.get("notes", "").strip()
 
+        assigned_to = current_user.user_id if current_user.role == COUNSELLOR else None
+
         new_lead = Lead(
             student_name=student_name,
             phone=phone,
@@ -117,7 +117,7 @@ def add_lead():
             lead_score=0,
             status="new",
             organization_id=organization_id,
-            assigned_to=current_user.user_id,
+            assigned_to=assigned_to,
         )
 
         db.session.add(new_lead)

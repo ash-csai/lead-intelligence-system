@@ -5,6 +5,8 @@ __pycache__/
 .env
 venv/
 .vscode/
+.pytest_cache/
+pytest-*.txt
 # OS files
 desktop.ini
 .DS_Store
