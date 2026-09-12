@@ -14,6 +14,49 @@ class TestDashboardRoutes:
         assert response.status_code == 200
         assert b"dashboard" in response.data.lower() or b"lead" in response.data.lower()
 
+    def test_dashboard_role_banner_and_counsellor_breakdown_visibility(self, client, app):
+        """Manager/Admin should see the team overview banner and counsellor breakdown, while Counsellor should see only the personalized view."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert b"Team overview" in response.data
+        assert b"Counsellor lead breakdown" in response.data
+
+        with app.app_context():
+            from database.models import User, Lead, db
+            db.session.query(Lead).delete()
+            db.session.query(User).filter(User.email != "admin@example.com").delete()
+            db.session.commit()
+
+            counsellor = User(name="Counsellor", email="counsellor-dashboard@example.com", role="Counsellor", organization_id=1, is_active=True)
+            counsellor.set_password("secret")
+            db.session.add(counsellor)
+            db.session.commit()
+
+            lead = Lead(
+                student_name="Counsellor Dashboard Lead",
+                phone="555-0100-1212",
+                city="Test City",
+                course_interest="Course",
+                lead_source="Website",
+                interest_level="high",
+                lead_score=75,
+                status="new",
+                organization_id=1,
+                assigned_to=counsellor.user_id,
+            )
+            db.session.add(lead)
+            db.session.commit()
+
+            client = app.test_client()
+            login_resp = client.post("/login", data={"email": "counsellor-dashboard@example.com", "password": "secret"}, follow_redirects=True)
+            assert login_resp.status_code in (200, 302)
+
+            counsellor_resp = client.get("/")
+            assert counsellor_resp.status_code == 200
+            assert b"Your leads" in counsellor_resp.data
+            assert b"Team overview" not in counsellor_resp.data
+            assert b"Counsellor lead breakdown" not in counsellor_resp.data
+
     def test_analytics_loads_200(self, client):
         """Analytics route should load successfully."""
         response = client.get("/analytics")
