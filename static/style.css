@@ -1,0 +1,61 @@
+/* Small-screen safety fixes for the existing Tailwind layout.
+   Keep the desktop look intact while avoiding mobile-only brokenness. */
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    min-height: 100vh;
+}
+
+main {
+    overflow-x: hidden;
+}
+
+#leads-results {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+#leads-results .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    main {
+        overflow-y: visible;
+        overflow-x: hidden;
+    }
+
+    .bg-white.rounded-xl.shadow-sm.border.border-slate-200.overflow-hidden {
+        max-width: 100%;
+    }
+
+    #leads-results table,
+    .overflow-x-auto table {
+        min-width: 100%;
+    }
+
+    input[type="checkbox"],
+    select,
+    button,
+    textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+        min-height: 44px;
+    }
+
+    .grid.grid-cols-1.lg\:grid-cols-4.gap-6 {
+        grid-template-columns: 1fr;
+    }
+}

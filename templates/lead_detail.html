@@ -2,155 +2,97 @@
 
 {% block content %}
 
-<div class="row">
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
 <!-- Lead Information -->
+<div class="lg:col-span-1">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 font-semibold text-slate-800">
+      Lead Information
+    </div>
+    <div class="p-6">
+      <h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">{{ lead.student_name }}</h4>
+      <p><strong>Phone:</strong> {{ lead.phone }}</p>
+      <p><strong>City:</strong> {{ lead.city }}</p>
+      <p><strong>Course:</strong> {{ lead.course_interest }}</p>
+      <p><strong>Interest Level:</strong> {{ lead.interest_level }}</p>
+      <p><strong>Lead Score:</strong> {{ lead.lead_score }}</p>
+      <p><strong>Status:</strong></p>
+      <form method="POST" action="/leads/update_status/{{ lead.lead_id }}">
+        <select class="form-control mb-2 w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" name="status">
+          <option value="new" {% if lead.status == "new" %}selected{% endif %}>New</option>
+          <option value="contacted" {% if lead.status == "contacted" %}selected{% endif %}>Contacted</option>
+          <option value="interested" {% if lead.status == "interested" %}selected{% endif %}>Interested</option>
+          <option value="applied" {% if lead.status == "applied" %}selected{% endif %}>Applied</option>
+          <option value="admitted" {% if lead.status == "admitted" %}selected{% endif %}>Admitted</option>
+          <option value="lost" {% if lead.status == "lost" %}selected{% endif %}>Lost</option>
+        </select>
+        <button class="btn btn-primary btn-sm w-full sm:w-auto">
+          Update Status
+        </button>
+      </form>
+      <p class="mt-4"><strong>Created:</strong> {{ lead.created_at }}</p>
+      <p><strong>Notes:</strong></p>
+      <p>{{ lead.notes }}</p>
+    </div>
+  </div>
 
-<div class="col-4">
-
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-<div class="px-6 py-4 border-b border-slate-200 bg-slate-50 font-semibold text-slate-800">
-Lead Information
+  <a href="/leads" class="btn btn-secondary mt-3 inline-block">
+    Back to Leads
+  </a>
 </div>
-
-<div class="p-6">
-
-<h4 class="text-lg font-semibold text-slate-800 mb-3 tracking-tight">{{ lead.student_name }}</h4>
-
-<p><strong>Phone:</strong> {{ lead.phone }}</p>
-
-<p><strong>City:</strong> {{ lead.city }}</p>
-
-<p><strong>Course:</strong> {{ lead.course_interest }}</p>
-
-<p><strong>Interest Level:</strong> {{ lead.interest_level }}</p>
-
-<p><strong>Lead Score:</strong> {{ lead.lead_score }}</p>
-
-<p><strong>Status:</strong></p>
-
-<form method="POST" action="/leads/update_status/{{ lead.lead_id }}">
-
-<select class="form-control mb-2" name="status">
-
-<option value="new" {% if lead.status == "new" %}selected{% endif %}>New</option>
-<option value="contacted" {% if lead.status == "contacted" %}selected{% endif %}>Contacted</option>
-<option value="interested" {% if lead.status == "interested" %}selected{% endif %}>Interested</option>
-<option value="applied" {% if lead.status == "applied" %}selected{% endif %}>Applied</option>
-<option value="admitted" {% if lead.status == "admitted" %}selected{% endif %}>Admitted</option>
-<option value="lost" {% if lead.status == "lost" %}selected{% endif %}>Lost</option>
-
-</select>
-
-<button class="btn btn-primary btn-sm">
-Update Status
-</button>
-
-</form>
-
-<p><strong>Created:</strong> {{ lead.created_at }}</p>
-
-<p><strong>Notes:</strong></p>
-<p>{{ lead.notes }}</p>
-
-</div>
-
-</div>
-
-<a href="/leads" class="btn btn-secondary mt-3">
-Back to Leads
-</a>
-
-</div>
-
 
 <!-- Interaction Timeline -->
-
-<div class="col-8">
-
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-
-<h5 class="text-md font-semibold text-slate-800 mb-2">Add Interaction</h5>
-
-<form method="POST" action="/interactions/add/{{ lead.lead_id }}">
-
-<div class="mb-2">
-
-<label class="form-label">Interaction Type</label>
-
-<select name="interaction_type" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" required>
-<option value="call">Call</option>
-<option value="visit">Visit</option>
-<option value="application">Application</option>
-</select>
-
-</div>
-
-<div class="mb-2">
-
-<label class="form-label">Notes</label>
-
-<textarea name="notes" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors"></textarea>
-
-</div>
-
-<div class="mb-2">
-
-<label class="form-label">Next Follow-up Date</label>
-
-<input type="date" name="follow_up_date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors">
-
-</div>
-
-<button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-colors text-sm">
-Add Interaction
-</button>
-
-</form>
-
-<hr>
-
-<div class="px-6 py-4 border-b border-slate-200 bg-slate-50 font-semibold text-slate-800">
-Interaction Timeline
-</div>
-
-<div class="p-6">
-
-{% if interactions %}
-
-<ul class="divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
-
-{% for i in interactions %}
-
-<li class="p-4 hover:bg-slate-50 transition-colors">
-
-<strong>{{ i.interaction_type }}</strong><br>
-
-{{ i.notes }}<br>
-
-<small class="text-muted">
-{{ i.created_at }}
-</small>
-
-</li>
-
-{% endfor %}
-
-</ul>
-
-{% else %}
-
-<p class="text-muted">
-No interactions recorded yet.
-</p>
-
-{% endif %}
-
-</div>
-
-</div>
-
+<div class="lg:col-span-3">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="p-6">
+      <h5 class="text-md font-semibold text-slate-800 mb-2">Add Interaction</h5>
+      <form method="POST" action="/interactions/add/{{ lead.lead_id }}">
+        <div class="mb-2">
+          <label class="form-label">Interaction Type</label>
+          <select name="interaction_type" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors" required>
+            <option value="call">Call</option>
+            <option value="visit">Visit</option>
+            <option value="application">Application</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors"></textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Next Follow-up Date</label>
+          <input type="date" name="follow_up_date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white transition-colors">
+        </div>
+        <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm transition-colors text-sm">
+          Add Interaction
+        </button>
+      </form>
+      <hr class="my-6">
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 font-semibold text-slate-800">
+        Interaction Timeline
+      </div>
+      <div class="p-6">
+        {% if interactions %}
+        <ul class="divide-y divide-slate-100 bg-white rounded-xl shadow-sm border border-slate-200">
+          {% for i in interactions %}
+          <li class="p-4 hover:bg-slate-50 transition-colors">
+            <strong>{{ i.interaction_type }}</strong><br>
+            {{ i.notes }}<br>
+            <small class="text-muted">
+              {{ i.created_at }}
+            </small>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">
+          No interactions recorded yet.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
 </div>
