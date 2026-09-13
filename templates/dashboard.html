@@ -88,7 +88,7 @@
                             </div>
 
                             <!-- Actions Form -->
-                            <form method="POST" action="/quick_action/{{ lead.lead_id }}" class="flex flex-wrap items-center gap-2 mt-2 xl:mt-0 xl:ml-4">
+                            <form method="POST" action="/quick_action/{{ lead.lead_id }}" hx-post="/quick_action/{{ lead.lead_id }}" hx-target="closest li" hx-swap="outerHTML" class="flex flex-wrap items-center gap-2 mt-2 xl:mt-0 xl:ml-4">
                                 {% if lead.last_action == "call" %}
                                     <button disabled class="inline-flex py-1.5 px-3 rounded-lg bg-emerald-50 text-emerald-600 text-sm font-semibold border border-emerald-100">✔ Done</button>
                                 {% else %}

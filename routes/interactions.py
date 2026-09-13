@@ -120,4 +120,7 @@ def quick_action(lead_id):
         db.session.rollback()
         abort(404)
 
+    if request.headers.get("HX-Request") == "true":
+        return "", 200
+
     return redirect("/")

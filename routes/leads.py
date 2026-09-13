@@ -55,6 +55,9 @@ def lead_list():
 
     status_options = ["new", "contacted", "interested", "applied", "admitted", "lost"]
 
+    if request.headers.get("HX-Request") == "true":
+        return render_template("leads_table_fragment.html", leads=leads, counsellors=counsellors, status_options=status_options)
+
     return render_template("leads.html", leads=leads, counsellors=counsellors, status_options=status_options)
 
 
@@ -120,6 +123,24 @@ def bulk_action():
             recalculate_and_persist_score(db, lead.lead_id)
 
         db.session.commit()
+        if request.headers.get("HX-Request") == "true":
+            leads_query = db.session.query(Lead).filter(Lead.organization_id == organization_id)
+            if current_user.role == COUNSELLOR:
+                leads_query = leads_query.filter(Lead.assigned_to == current_user.user_id)
+            leads = leads_query.order_by(Lead.created_at.desc()).all()
+
+            counsellors = []
+            if current_user.role in {ADMIN, MANAGER}:
+                counsellors = (
+                    db.session.query(User)
+                    .filter(User.organization_id == organization_id, User.role == COUNSELLOR)
+                    .order_by(User.name.asc())
+                    .all()
+                )
+
+            status_options = ["new", "contacted", "interested", "applied", "admitted", "lost"]
+            return render_template("leads_table_fragment.html", leads=leads, counsellors=counsellors, status_options=status_options)
+
         return redirect("/leads")
 
     abort(400)

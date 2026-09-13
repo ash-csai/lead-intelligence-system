@@ -18,7 +18,7 @@
 
 {% if current_user.role in ['Admin', 'Manager'] %}
 <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
-    <form method="POST" action="/leads/bulk_action" class="flex flex-wrap items-end gap-3">
+    <form method="POST" action="/leads/bulk_action" hx-post="/leads/bulk_action" hx-target="#leads-results" hx-swap="innerHTML" class="flex flex-wrap items-end gap-3">
         <input type="hidden" name="bulk_action" value="reassign">
         <div>
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Bulk Reassign</label>
@@ -46,7 +46,7 @@
 
 <!-- Filters Utility Bar -->
 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
-    <form method="GET" action="/leads" class="flex flex-col md:flex-row md:flex-wrap lg:flex-nowrap items-end gap-4">
+    <form method="GET" action="/leads" hx-get="/leads" hx-target="#leads-results" hx-swap="innerHTML" class="flex flex-col md:flex-row md:flex-wrap lg:flex-nowrap items-end gap-4">
         
         <div class="flex-1 w-full relative min-w-[200px]">
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Search Keyword</label>
@@ -94,7 +94,7 @@
 </div>
 
 <!-- Data Grid Container -->
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<div id="leads-results" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="overflow-x-auto">
         <table class="w-full whitespace-nowrap text-left border-collapse min-w-max">
             <thead>

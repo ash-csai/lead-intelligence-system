@@ -236,6 +236,17 @@ class TestLeadRoutes:
             assert response.status_code == 200
 
 
+class TestHtmxRoutes:
+    """Exercise the htmx enhancement contract for the main browser routes without replacing the normal Jinja/Flask server-rendered fallbacks."""
+
+    def test_leads_list_htmx_request_returns_fragment(self, client):
+        """An htmx request should receive the leads table fragment rather than the full leads page shell, while non-htmx navigation continues to receive the full render stack."""
+        response = client.get("/leads", headers={"HX-Request": "true"})
+        assert response.status_code == 200
+        assert b"<table" in response.data.lower()
+        assert b"Leads Directory" not in response.data
+
+
 class TestApiV1Scaffolding:
     """Regression checks for the versioned API docs and token middleware hooks."""
 
