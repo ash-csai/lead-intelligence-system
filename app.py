@@ -1,7 +1,8 @@
 import os
 
-from flask import Flask
+from flask import Flask, redirect
 from flask_login import LoginManager
+from flask_smorest import Api
 from database.db_connection import configure_db, close_db
 from config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
 
@@ -11,6 +12,7 @@ from routes.leads import leads_bp
 from routes.interactions import interactions_bp
 from routes.institutions import institutions_bp
 from routes.auth import auth_bp
+from routes.api import api_bp
 
 
 def _resolve_config(config_object=None, config_name=None):
@@ -66,6 +68,17 @@ def create_app(config_object=None, config_name=None):
             Config.SQLALCHEMY_DATABASE_URI,
         )
 
+    # Flask-Smorest API docs and spec configuration.
+    app.config.setdefault("API_TITLE", "Lead Intelligence System API")
+    app.config.setdefault("API_VERSION", "v1")
+    app.config.setdefault("OPENAPI_VERSION", "3.0.2")
+    app.config.setdefault("OPENAPI_URL_PREFIX", "/api/v1/docs")
+    app.config.setdefault("OPENAPI_JSON_PATH", "openapi.json")
+    app.config.setdefault("OPENAPI_REDOC_PATH", "/redoc")
+    app.config.setdefault("OPENAPI_REDOC_URL", "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js")
+    app.config.setdefault("OPENAPI_SWAGGER_UI_PATH", "/swagger")
+    app.config.setdefault("OPENAPI_SWAGGER_UI_URL", "https://cdn.jsdelivr.net/npm/swagger-ui-dist/")
+
     # Configure SQLAlchemy
     configure_db(app)
 
@@ -82,6 +95,14 @@ def create_app(config_object=None, config_name=None):
         return User.query.get(int(user_id))
 
     app.teardown_appcontext(close_db)
+
+    # Register the API object for automatic OpenAPI and UI docs under /api/v1/docs.
+    api = Api(app)
+    api.register_blueprint(api_bp)
+
+    @app.route("/api/v1/docs")
+    def api_docs_redirect():
+        return redirect("/api/v1/docs/swagger")
 
     # Register blueprints (keep original URLs)
     app.register_blueprint(dashboard_bp)

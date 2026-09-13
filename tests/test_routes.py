@@ -236,6 +236,21 @@ class TestLeadRoutes:
             assert response.status_code == 200
 
 
+class TestApiV1Scaffolding:
+    """Regression checks for the versioned API docs and token middleware hooks."""
+
+    def test_api_docs_route_and_invalid_bearer_token_reject(self, client):
+        """The API docs route should redirect into the auto-generated Flask-Smorest UI, and the bearer-token gate should reject a bogus Authorization header with a clean 401 JSON response instead of falling to the browser login UI."""
+        docs_resp = client.get("/api/v1/docs", follow_redirects=True)
+        assert docs_resp.status_code == 200
+        assert b"swagger" in docs_resp.data.lower()
+
+        bad_token_resp = client.get("/api/v1/leads", headers={"Authorization": "Bearer totally-not-a-real-token"})
+        assert bad_token_resp.status_code == 401
+        assert bad_token_resp.is_json
+        assert b"Missing or invalid bearer token" in bad_token_resp.data
+
+
 class TestConfigFactory:
     """Verify that configuration objects are accepted by the app factory cleanly."""
 

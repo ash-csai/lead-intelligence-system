@@ -155,6 +155,23 @@ class Interaction(db.Model):
         return f"<Interaction {self.interaction_id}: {self.interaction_type}>"
 
 
+class ApiToken(db.Model):
+    """Hashed API bearer tokens issued to a specific user for the v1 API.
+
+    A plaintext token is returned once to the caller and then discarded.
+    Only the SHA-256 digest is stored in the database.
+    """
+
+    __tablename__ = "api_tokens"
+
+    token_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable=False, unique=True)
+    token_hash = db.Column(db.String(255), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user = db.relationship("User", backref="api_token")
+
+
 class User(UserMixin, db.Model):
     """Users table — logged-in account records with a role enum."""
 
